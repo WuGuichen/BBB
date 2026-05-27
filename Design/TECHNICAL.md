@@ -1,6 +1,6 @@
 # TECHNICAL — 技术方案与框架映射
 
-> 版本 0.2 | 2026-05-27
+> 版本 0.3 | 2026-05-27
 >
 > 本文描述游戏系统如何映射到 MxFramework，以及框架的缺口和调整建议。
 > 玩法设计见 [GDD.md](GDD.md)，制作计划见 [MILESTONES.md](MILESTONES.md)。
@@ -65,23 +65,23 @@ Trace Phase   → 记录 DecisionTrace（⚠️ 需框架补能力）
 
 ## 2.3 战斗 → Combat Physics + Gameplay Ability
 
-| 游戏攻击 | 框架实现 |
-|----------|----------|
-| Bite 咬击 | `CombatPhysicsWorld.Query(Sphere)` + `DamageByAttackDefense` |
-| Charge 冲撞 | `CombatKinematicMotor.MoveForward` + `Query(Capsule sweep)` + 击退 |
-| Slash 爪击 | `Query(Sector)` + `DamageByAttackDefense` |
-| Projectile 骨刺 | `CombatPhysicsWorld` Sphere projectile + `ApplyBuff(Poison)` |
-| Hazard 酸池 | ⚠️ 需框架补 HazardVolume 或游戏层自建 |
+| 游戏攻击 | 框架实现 | 阶段 |
+|----------|----------|------|
+| Bite 咬击 | `CombatPhysicsWorld.Query(Sphere)` + `DamageByAttackDefense` | `MVP` |
+| Charge 冲撞 | `CombatKinematicMotor.MoveForward` + `Query(Capsule sweep)` + 击退 | `MVP` |
+| Slash 爪击 | `Query(Sector)` + `DamageByAttackDefense` | `Post-MVP` |
+| Projectile 骨刺 | `CombatPhysicsWorld` Sphere projectile + `ApplyBuff(Poison)` | `Long-term` |
+| Hazard 酸池 | ⚠️ 需 HazardVolume 或游戏层自建 | `Post-MVP` |
 
 ## 2.4 地图 → Combat Physics + NavGraph
 
-| 地图元素 | 框架实现 |
-|----------|----------|
-| 墙壁 | `CombatPhysicsWorld` AABB body + collider |
-| 危险区 | ⚠️ 需 HazardVolume（AABB/Sphere + damagePerTick） |
-| 资源点 | Game layer component（Sphere trigger zone） |
-| 出口 | Game layer component（Sphere trigger zone） |
-| 寻路 | ⚠️ 需纯 C# NavGraph（Waypoint + Edge + A*） |
+| 地图元素 | 框架实现 | 阶段 |
+|----------|----------|------|
+| 墙壁 | `CombatPhysicsWorld` AABB body + collider | `MVP` |
+| 资源点 | Game layer component（Sphere trigger zone） | `MVP` |
+| 出口 | Game layer component（Sphere trigger zone） | `MVP` |
+| 危险区 | ⚠️ 需 HazardVolume（AABB/Sphere + damagePerTick） | `Post-MVP` |
+| 寻路 | MVP: 手工 Waypoint + BFS；Post-MVP: A* + NavGraph | `MVP` |
 
 ## 2.5 移动 → Combat Kinematic Motor
 
@@ -128,131 +128,131 @@ RuntimeHost Tick
 
 ## 3.1 缺口总表
 
-| # | 系统 | 缺口 | 游戏影响 | 优先级 |
-|---|------|------|----------|--------|
-| A | AI Planner | Goal Priority 无动态调整 | AI Profile 无法生效 | **P0** |
-| B | AI Planner | Action Cost 无 modifier 机制 | 性格无法影响行为偏好 | **P0** |
-| C+K | AI Planner + Debug | 无 PlannerTrace 输出 | 脑内视图和战后报告做不了 | **P0** |
-| E+F | Combat | 无 HazardVolume 概念 | 酸池/毒气需要游戏层自建 | **P1** |
-| H | Navigation | 无 NavGraph / A* 寻路 | 生物无法自动避障寻路 | **P1** |
-| J | Gameplay | 无 Inventory 组件 | 拾取/携带需要游戏层自建 | **P2** |
+| # | 系统 | 缺口 | 游戏影响 | 优先级 | 策略 |
+|---|------|------|----------|--------|------|
+| A | AI Planner | Goal Priority 无动态调整 | AI Profile 无法生效 | **P0** | 游戏层先硬编码 |
+| B | AI Planner | Action Cost 无 modifier 机制 | 性格无法影响行为偏好 | **P0** | 游戏层先硬编码 |
+| C+K | AI Planner + Debug | 无 PlannerTrace 输出 | 脑内视图和战后报告做不了 | **P0** | 游戏层先自建 trace |
+| E+F | Combat | 无 HazardVolume 概念 | 酸池/毒气需要游戏层自建 | **P1** | 游戏层自建 |
+| H | Navigation | 无 NavGraph / A* 寻路 | 生物无法自动避障寻路 | **P1** | MVP 用手工 Waypoint+BFS |
+| J | Gameplay | 无 Inventory 组件 | 拾取/携带需要游戏层自建 | **P2** | 游戏层自建 |
 
-## 3.2 P0 缺口详解
+## 3.2 核心策略：游戏层先硬编码验证
 
-### 缺口 A：Goal Priority 动态调整
+**当功能只服务 WGame_B 当前切片时，优先游戏层实现。当两个以上项目或框架 Demo 都需要时，再上升为框架能力。**
 
-**需求**：同一身体，不同 AI Profile 改变 goal 优先级。Coward 的 `avoid.death` +60，Hunter 的 `defeat.enemy` +40。
+具体做法：
 
-**现状**：`PriorityGoalSelector` 按固定优先级选择目标，无运行时偏移接口。
+### 缺口 A/B：AI Profile Adapter
 
-**建议**：给 `PriorityGoalSelector` 增加 `IGoalPriorityModifier` 接口。
+不等框架补 Goal Priority Modifier 和 Action Cost Modifier。游戏层先做 `CreatureAiProfileRuntimeAdapter`：
 
 ```csharp
-public interface IGoalPriorityModifier
+public sealed class CreatureAiProfileRuntimeAdapter
 {
-    int ModifyPriority(IAiGoal goal, int basePriority, IAiWorldState state);
+    // 根据 Profile 生成不同的 goals 列表
+    public IAiGoal[] CreateGoals(AiProfileKind profile)
+    {
+        return profile switch
+        {
+            AiProfileKind.TaskFirst => new IAiGoal[]
+            {
+                new FactGoal("collect.resource", priority: 90),
+                new FactGoal("return.exit", priority: 80),
+                new FactGoal("avoid.death", priority: 50),
+            },
+            AiProfileKind.Hunter => new IAiGoal[]
+            {
+                new FactGoal("defeat.enemy", priority: 90),
+                new FactGoal("collect.resource", priority: 40),
+                new FactGoal("return.exit", priority: 30),
+            },
+            AiProfileKind.Coward => new IAiGoal[]
+            {
+                new FactGoal("avoid.death", priority: 95),
+                new FactGoal("return.exit", priority: 70),
+                new FactGoal("collect.resource", priority: 30),
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(profile))
+        };
+    }
+
+    // 根据 Profile 生成不同的 actions 列表
+    public IAiAction[] CreateActions(AiProfileKind profile)
+    {
+        var actions = new List<IAiAction>();
+        // 基础 action 所有 profile 共享
+        actions.Add(new MoveToResourceAction(cost: 10));
+        actions.Add(new PickUpResourceAction(cost: 5));
+        actions.Add(new MoveToExitAction(cost: 10));
+        actions.Add(new FleeFromThreatAction(cost: 15));
+        actions.Add(new WaitAction(cost: 1));
+
+        // Profile 特化
+        if (profile == AiProfileKind.Hunter)
+        {
+            actions.Add(new BiteEnemyAction(cost: 8)); // 低 cost = 更倾向攻击
+        }
+        else
+        {
+            actions.Add(new BiteEnemyAction(cost: 30)); // 高 cost = 不倾向攻击
+        }
+
+        return actions.ToArray();
+    }
 }
 ```
 
-游戏层注入 AiProfile 的 modifier，运行时按 `(basePriority + modifiers)` 排序。
+这样不需要修改框架，也能先验证 3 个 Profile 的行为差异。等 Profile 行为真的成立，再把通用能力沉淀回框架。
 
-### 缺口 B：Action Cost 动态调整
+### 缺口 C+K：游戏层 Decision Trace
 
-**需求**：AI Profile 改变 action 成本。Hunter 的 `bite.cost -10`，Coward 的 `attack.cost +40`。
-
-**现状**：`IAiAction.Cost` 是固定值，无 modifier 机制。
-
-**建议**：给 `IAiAction` 增加 cost modifier（类似 `AttributeModifier`）。
+不等框架补 PlannerTrace。游戏层自建 `CreatureAiDecisionTrace`：
 
 ```csharp
-public interface IAiActionCostModifier
-{
-    int ModifyCost(IAiAction action, int baseCost, IAiWorldState state);
-}
-```
-
-### 缺口 C+K：PlannerTrace
-
-**需求**：战后报告需要结构化 AI 决策历史 — frame、facts、选中的 goal/action、拒绝原因。
-
-**现状**：`SequentialPlanner` 只输出最终 plan，不记录中间决策过程。
-
-**建议**：给 `SequentialPlanner` 增加 trace 输出。
-
-```csharp
-public sealed class AiPlannerTrace
+public sealed class CreatureAiDecisionTrace
 {
     public RuntimeFrame Frame;
-    public Dictionary<string, object> FactsSnapshot;
-    public AiGoalEval[] EvaluatedGoals;    // goal + priority + selected?
-    public AiActionEval[] EvaluatedActions; // action + cost + precondition pass/reject reason
+    public Dictionary<string, bool> FactsSnapshot;
     public string SelectedGoal;
     public string SelectedAction;
+    public int ActionCost;
+    public string Reason;
 }
 ```
 
-接入 `DebugUiTimelineViewModel`，游戏层收集 trace 序列格式化为战后报告。
+在 `CreatureAiRuntimeModule` 每次规划后记录一条 trace。游戏层收集 trace 序列，格式化为 Mission Report。
 
-## 3.3 P1 缺口详解
+### 缺口 E+F：游戏层 HazardVolume
 
-### 缺口 E+F：HazardVolume
-
-**需求**：酸池、毒气区每 tick 对区域内实体造成伤害/挂 Buff，进入/离开时触发事件。
-
-**建议**：新增 `HazardVolume` 概念。
+不等框架补。游戏层自建最小版：
 
 ```csharp
-public sealed class HazardVolume
+public sealed class GameHazardVolume
 {
     public int VolumeId;
-    public Aabb Bounds;           // 或 Sphere
-    public int DamagePerTick;     // 0 = 无直接伤害
-    public int BuffId;            // 0 = 不挂 Buff
-    public int TickInterval;      // 每 N tick 触发一次
+    public Aabb Bounds;
+    public int DamagePerTick;
+    public int BuffId; // 0 = 不挂 Buff
 }
 ```
 
-作为 `IRuntimeModule` 接入 RuntimeHost，每 tick 查询 `CombatPhysicsWorld` 区域内实体，自动施加伤害/Buff。
+在 `EcoMapRuntimeModule` 每 tick 查询 `CombatPhysicsWorld` 区域内实体，施加伤害/Buff。
 
-### 缺口 H：NavGraph 寻路
+### 缺口 H：MVP 用手工 Waypoint
 
-**需求**：生物从 A 走到 B 需要避障寻路（Room + Portal 结构）。
+不等框架补 NavGraph。MVP 用：
 
-**建议**：新增纯 C# `NavGraph`。
-
-```csharp
-public sealed class NavGraph
-{
-    public NavWaypoint[] Waypoints;
-    public NavEdge[] Edges;       // 带 cost 和 portal 限制
-}
-
-public static class NavPathfinder
-{
-    public static NavPath FindPath(NavGraph graph, int from, int to);
-}
+```
+固定 Waypoint 数组
+手工连边
+BFS 求路径
+无动态障碍
+无地形 cost
+无 portal 限制
 ```
 
-A* 或 BFS，不依赖 Unity NavMesh。游戏层定义 Room/Portal 拓扑，框架提供寻路算法。
-
-## 3.4 P2 缺口详解
-
-### 缺口 J：Inventory Component
-
-**需求**：生物能携带资源（拾取、持有、放下）。
-
-**建议**：新增 `GameplayInventoryComponent`，接入 `GameplayComponentWorld` 的 hash 和 SaveState。
-
-```csharp
-public sealed class GameplayInventoryComponent
-{
-    public int MaxCapacity;
-    public int CurrentCount;
-    public void Add(int count);
-    public void Remove(int count);
-    public bool IsFull { get; }
-}
-```
+等多房间和生态地图再加 A*、cost 和 portal 限制。
 
 ---
 
@@ -263,19 +263,19 @@ public sealed class GameplayInventoryComponent
 | 主循环 | **复用** RuntimeHost + CommandBuffer | 框架核心能力，直接用 |
 | 属性系统 | **复用** AttributeStore | v1 稳定，直接用 |
 | Buff 系统 | **复用** BuffPipeline | v1 稳定，直接用 |
-| AI 规划 | **复用** SequentialPlanner | v1 可用，但需补 3 个 P0 扩展 |
+| AI 规划 | **复用** SequentialPlanner | v1 可用，Profile 用游戏层 Adapter |
 | 碰撞查询 | **复用** CombatPhysicsWorld | v1 稳定，直接用 |
 | 移动 | **复用** CombatKinematicMotor | v0.1 可用 |
 | 实体管理 | **复用** GameplayComponentWorld | v0.1 可用 |
 | 配置 | **复用** ConfigTable + ConfigSchema | v1 稳定，直接用 |
 | 回放/存档 | **复用** Replay + SaveState | v0.1 可用 |
 | Debug UI | **复用** DebugSourceRegistry + Timeline | v0.1-v0.2 可用 |
-| 任务系统 | **自建** MissionRuntimeModule | 框架无通用 Mission 系统，纯游戏层逻辑 |
-| 导航 | **自建或框架补** NavGraph | 框架无寻路，建议框架提供最小实现 |
-| 危险区 | **自建或框架补** HazardVolume | 框架无持续区域伤害，建议框架提供原语 |
+| 任务系统 | **自建** MissionRuntimeModule | 框架无通用 Mission 系统 |
+| 导航 | **自建** 手工 Waypoint + BFS | 框架无寻路，MVP 不需要 A* |
+| 危险区 | **自建** GameHazardVolume | 框架无持续区域伤害 |
 | 生态模拟 | **自建** EcoMapRuntimeModule | 纯游戏层逻辑 |
-| 战后报告 | **自建** Diagnostics 模块 | 游戏层格式化，复用框架 trace 输出 |
-| 角色控制 | **包 adapter** CreatureControlAdapter | 复用 CharacterControl 思路，不重写运动管线 |
+| 战后报告 | **自建** Diagnostics 模块 | 游戏层格式化，复用框架 trace |
+| 角色控制 | **包 adapter** CreatureControlAdapter | 复用 CharacterControl 思路 |
 
 ---
 
@@ -284,7 +284,7 @@ public sealed class GameplayInventoryComponent
 ```
 Assets/Scripts/VVV/
 ├── Creature/              # 生物定义、身体部件、实例创建
-├── CreatureAi/            # AI Profile、Fact/Goal/Action 映射、Decision Trace
+├── CreatureAi/            # AI Profile Adapter、Fact/Goal/Action、Decision Trace
 ├── CreatureCombat/        # 攻击判定、伤害结算、死亡
 ├── EcoMap/                # 房间图、碰撞体、资源点、出口、危险区
 ├── Mission/               # 任务目标、状态、成功/失败、战后报告
@@ -304,12 +304,13 @@ Assets/Scripts/VVV/
 
 ```
 1. Sensor 收集世界信息 → 写入 AiWorldState facts
-2. AiProfile 调整 goal priority / action cost（⚠️ 需框架补 A/B）
-3. SequentialPlanner 规划 → 输出 plan + trace（⚠️ 需框架补 C）
-4. 取第一个 action → 转成 CreatureCommand
-5. Movement / Combat / Mission 执行
-6. 写事件、hash、trace
-7. Debug UI 读取快照
+2. AiProfile Adapter 生成 goals/actions（游戏层硬编码）
+3. SequentialPlanner 规划 → 输出 plan
+4. 游戏层记录 DecisionTrace
+5. 取第一个 action → 转成 CreatureCommand
+6. Movement / Combat / Mission 执行
+7. 写事件、hash、trace
+8. Debug UI 读取快照
 ```
 
 关键简化：

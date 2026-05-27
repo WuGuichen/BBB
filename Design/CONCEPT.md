@@ -51,6 +51,18 @@
 
 边境实验站管理员 — 用半生物半机械的造物探索危险生态区，回收资源，解锁身体部件和 AI 模块。
 
+## 首个可玩切片
+
+完整愿景很大，但第一版只验证：
+
+- 单体生物
+- 预制 AI Profile（TaskFirst / Hunter / Coward）
+- 单房间任务地图
+- 回收任务
+- 最小战后报告（Brain View + Mission Report）
+
+只要这个切片好玩，整个方向就成立。
+
 ## 标签
 
 `Creature Builder` · `AI Sandbox` · `Roguelite` · `Simulation` · `Indirect Control` · `Systemic Gameplay` · `Lowpoly Stylized`

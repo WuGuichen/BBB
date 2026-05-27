@@ -2,18 +2,29 @@
 
 ## 阅读顺序
 
-| 顺序 | 文档 | 用途 | 读者 |
-|------|------|------|------|
-| 1 | [CONCEPT.md](CONCEPT.md) | 一页纸概念定位 | 任何人 |
-| 2 | [GDD.md](GDD.md) | 玩法设计正文 | 策划、程序、美术 |
-| 3 | [TECHNICAL.md](TECHNICAL.md) | 技术方案与框架缺口 | 程序 |
-| 4 | [MILESTONES.md](MILESTONES.md) | 制作计划 | 制作人、程序 |
+| 顺序 | 文档 | 版本 | 用途 | 读者 |
+|------|------|------|------|------|
+| 1 | [CONCEPT.md](CONCEPT.md) | v0.3 | 一页纸概念定位 | 任何人 |
+| 2 | [GDD.md](GDD.md) | v0.3 | 玩法设计正文（每系统标 MVP/Post-MVP/Long-term） | 策划、程序、美术 |
+| 3 | [TECHNICAL.md](TECHNICAL.md) | v0.3 | 技术方案、框架映射、缺口分析、游戏层临时实现策略 | 程序 |
+| 4 | [MILESTONES.md](MILESTONES.md) | v0.3 | 制作计划（M0-M9，量化验收条件） | 制作人、程序 |
 
 ## 原则
 
 - **每份文档只写一次**。交叉引用代替复制粘贴。
 - **设计决策和理由**归 GDD；**框架映射和配置格式**归 TECHNICAL；**排期和验收**归 MILESTONES。
+- **冲突裁决**：代码 > MILESTONES 当前阶段 > TECHNICAL 约束 > GDD 意图 > CONCEPT 愿景
 - 旧草稿已归档至 `Archive/`。
+
+## v0.3 主要变更（2026-05-27）
+
+基于制作人审阅意见修订：
+
+- **README**：补当前状态、命名关系、冲突裁决规则
+- **CONCEPT**：补"首个可玩切片"小节，隔离愿景与 MVP
+- **GDD**：每个系统标阶段标签（MVP/Post-MVP/Long-term）；MVP 范围收窄（6 类部件、3 个 Profile、2 个信号、2 种攻击、1 种任务）
+- **TECHNICAL**：补"游戏层先硬编码验证"策略；AI Profile 用游戏层 Adapter 不等框架扩展；MVP 导航用手工 Waypoint+BFS
+- **MILESTONES**：重排为 M0-M9；M2 只用 TaskFirst；Brain View/Report 提前到 M3；验收条件量化
 
 ## 关联文档
 
