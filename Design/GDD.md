@@ -285,6 +285,14 @@ SpawnScore = TerrainMatch + FoodAvailability + ShelterAvailability
 
 > **失败也能给 Data** — 这是关键设计。
 
+**Data 奖励曲线**（M3 同步实现）：
+- **新失败模式**（这只生物以前没死过这样）：给大量 Data
+- **重复失败模式**（同样原因死第三次）：递减给 Data
+- 这样玩家自然被引导"每次失败学到新东西"
+
+**防滥用**：如果失败和成功给的 Data 一样多，玩家会无脑投放廉价生物送死。必须有递减曲线。
+
+
 ## 9.2 科技树 `Post-MVP`
 
 5 条线：Body 身体工程 / Sensor 感知技术 / Brain AI脑模块 / Habitat 基地设施 / Field Tools 现场工具
@@ -305,6 +313,23 @@ SpawnScore = TerrainMatch + FoodAvailability + ShelterAvailability
 
 ## 10.2 脑内视图（AI 调试 UI） `MVP: 最小` `Post-MVP: 完整`
 
+Brain View 分两层：
+
+**玩家层（默认显示）**：自然语言归因 + 最多 3 个高亮 Tag。
+
+```
+选择了【逃跑】
+原因：血量太低（最强因素）、敌人数量过多
+你的召回信标也支持这个决定。
+```
+
+```
+正在【拾取资源】
+原因：任务目标就在附近、没有敌人、背包未满
+```
+
+**开发者层（按 F1 打开）**：原始 Utility 数字和规则触发详情。
+
 ```
 当前状态：Combat
 最高意图：Flee 82
@@ -316,7 +341,8 @@ SpawnScore = TerrainMatch + FoodAvailability + ShelterAvailability
   -18 当前攻击惯性
 ```
 
-**这不是开发调试，是玩法 UI。** 没有它，玩家看不懂 AI 为什么这么做。
+**关键**：玩家看到的不是数字，是"为什么"。只显示 Utility 数字对非程序员是反直觉的 — "82 是多少？82 够不够大？为什么不是 100？" 自然语言归因才是真正的解法。
+
 
 ## 10.3 战后报告 `MVP: 最小` `Post-MVP: 完整`
 
@@ -358,10 +384,11 @@ SpawnScore = TerrainMatch + FoodAvailability + ShelterAvailability
 
 | 风险 | 解决 |
 |------|------|
-| 玩家看不懂 AI | M2 就做 Brain View + Mission Report，每个 action 有 reason |
+| 涌现 vs 噪声：AI 的"自主性"在玩家眼里是意外还是随机？ | Brain View 自然语言归因 + 失败分类可理解 + 部件差异可感知 |
+| 玩家看不懂 AI | M3 做 Brain View（自然语言层），每个 action 有 reason |
 | 不能直接控制很烦 | 有限但强的间接指挥 + AI 不听话有合理原因 |
+| 构筑有最优解通杀 | **预算/维护成本是底层数学，不是 Post-MVP 装饰**。MVP 就必须有反协同 |
 | 构筑太复杂 | 预设模板 + 卡片规则 + 推荐修改项 |
-| 所有玩家找最优解 | 环境多样化 + 部件维护成本 + 生态反制 |
 | 美术风格不统一 | 统一低模风格 + 统一材质色板 + 统一部件接口 |
 
 ---

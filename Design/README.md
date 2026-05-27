@@ -16,6 +16,15 @@
 - **冲突裁决**：代码 > MILESTONES 当前阶段 > TECHNICAL 约束 > GDD 意图 > CONCEPT 愿景
 - 旧草稿已归档至 `Archive/`。
 
+## v0.4 主要变更（2026-05-27）
+
+基于第二轮审阅（设计层面）修订：
+
+- **CONCEPT**：补竞品（The Bibites / The Sapling / Creatures）；补核心风险"涌现 vs 噪声"；补目标玩家画像
+- **GDD**：Brain View 改为双层（玩家层自然语言归因 + 开发者层原始数字）；Data 奖励加递减曲线防滥用；风险表加"涌现 vs 噪声"和"构筑通杀"
+- **MILESTONES**：M3/M6/M7 加主观 Playtest 节点；M5 加反协同验证；M6/M7 完成后立即跑批量仿真（不等到 M9）；M8 信号效果数字改为"批量仿真后标定"；风险表加 hash 回归和构筑通杀
+- **TECHNICAL**：新增 §7 确定性回放代价，强调 Replay hash CI 自动化
+
 ## v0.3 主要变更（2026-05-27）
 
 基于制作人审阅意见修订：

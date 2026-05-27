@@ -318,3 +318,16 @@ Assets/Scripts/VVV/
 - AI 只每隔 N 帧决策一次（避免抖动）
 - Action 执行中不每帧重规划
 - 只执行 plan 的第一个 action
+
+---
+
+# 7. 确定性回放的代价
+
+M1-M2 强调 Replay hash 一致。这对确定性是正确的，但要注意成本：
+
+1. **浮点运算**：框架已用 Fix64/FixVector3。游戏层新增的任何运算也必须遵守。
+2. **每加一个系统都要重新验证 hash**：M4 引入战斗、M5 引入部件属性、M7 引入 HazardVolume — 每次合并 PR 都要跑 Replay hash 回归测试。
+3. **小概率事件**：必须用 deterministic RNG seed。
+4. **物理引擎**：不能用 Unity Physics 做权威，框架已处理（CombatPhysicsWorld）。
+
+**必须尽早自动化 Replay hash CI**，而不是手工跑。否则到 M7 时会发现某个浮点累加在不同机器上差 1 位，然后回溯一个月的提交。

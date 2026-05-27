@@ -111,6 +111,8 @@
 - Brain View 关键 Label 文本非空，颜色 alpha > 0
 - 任务失败后，报告能指出至少一个失败原因
 - 玩家能根据报告说出"下次我该怎么改"
+- **主观 Playtest**：让 3 个非开发者看完一次任务，能复述"这只生物刚才为什么这么做"。技术上的 MVP 跑通不代表玩法上的 MVP 跑通。
+- **Data 奖励去重**：新失败模式给大量 Data，重复失败模式递减。防止玩家无脑送死刷 Data。
 
 ---
 
@@ -162,6 +164,7 @@
 - armor_shell 生存率比 thin_skin 高 ≥ 20%
 - smell_sensor 能在无视野时找到资源（basic_eye 不能）
 - charge_horn 解锁 Charge 攻击
+- **反协同验证**：fast_legs + armor_shell 组合，在能量预算约束下，成功率不能严格高于 fast_legs + thin_skin 和 stable_legs + armor_shell 中任意一个。**预算/维护成本是底层数学，不是 Post-MVP 装饰。**
 
 性价比简化：模型暂不变，只改颜色/图标/HUD 文案。
 
@@ -182,6 +185,13 @@
 - Coward 在 enemy.near + hp.low 时，Flee 选择率 ≥ 80%
 - Brain View 能解释三个 Profile 的行为差异
 - 同一 Replay 输入下，三个 Profile 的 hash 不同（因为 plan 不同）
+
+**M6 完成后立即跑批量仿真**（不等到 M9）：
+- 100 次 TaskFirst vs Hunter vs Coward
+- 确认 Profile 真有统计显著差异
+- 输出成功率、平均耗时、死亡率、失败分类分布
+
+**Playtest**：让 3 个非开发者试玩 30 分钟，写下他们以为这游戏在干什么。
 
 ---
 
@@ -216,6 +226,12 @@
 - guard_beast 守着高价值资源点
 - 酸池每 tick 对区域内实体造成伤害
 
+**M7 完成后立即跑批量仿真**：
+- 确认不同地图标签影响物种分布
+- 确认酸池地图和普通地图的成功率有差异
+
+**Playtest**：让 3 个非开发者在酸池地图试玩，观察他们是否理解"为什么生物在酸池里会死"。
+
 ---
 
 ## M8：玩家间接指挥
@@ -228,7 +244,7 @@
 3. 不同 Profile 对信号的不同响应
 
 验收：
-- Recall Beacon 能提高 Return 行为选择率 ≥ 30%
+- Recall Beacon 能提高 Return 行为选择率（具体数字在批量仿真后标定，30% 对玩家几乎察觉不到，通常需要 60-70%+）
 - Hunter 对 Recall 的响应弱于 TaskFirst（因为 defeat.enemy 优先级高）
 - Coward 对 Recall 的响应强于 Hunter
 
@@ -275,11 +291,14 @@
 
 | 风险 | 应对 |
 |------|------|
-| AI 看起来像乱跑 | M3 做 Brain View，每个 action 有 reason |
+| 涌现 vs 噪声：AI 自主性是意外还是随机？ | Brain View 自然语言归因 + 失败分类可理解 + M3/M6/M7 Playtest |
+| AI 看起来像乱跑 | M3 做 Brain View（自然语言层），每个 action 有 reason |
 | 系统太复杂没人能调 | 先只给 3 个 AI Profile，不开放自由编辑 |
 | 战斗不好玩 | 第一版战斗只验证 AI 策略（打/跑/完成任务），不追求手感 |
 | 美术拖住开发 | 全用占位几何体，身体部件只在 HUD 展示 |
 | 框架 AI 扩展未到位 | 游戏层先硬编码 Profile Adapter，不等框架补 P0 |
+| 最强构筑通杀 | M5 就做预算/维护成本反协同，不是 Post-MVP 装饰 |
+| 确定性回放 hash 回归 | 尽早自动化 Replay hash CI，每次合并 PR 跑回归 |
 
 ---
 
