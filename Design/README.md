@@ -1,23 +1,22 @@
-# WGame_B 游戏设计文档
+# WGame_B 设计文档
 
-## 文档索引
+## 阅读顺序
 
-| 版本 | 文件 | 状态 | 说明 |
+| 顺序 | 文档 | 用途 | 读者 |
 |------|------|------|------|
-| v0.1 | [GDD_v0.1.md](GDD_v0.1.md) | ✅ 已完成 | 玩法设计文档 — 核心循环、身体系统、AI蓝图、生态模拟、MVP定义 |
-| v0.1 | [Combat_and_Map_v0.1.md](Combat_and_Map_v0.1.md) | ✅ 已完成 | 战斗与地图设计 — 竞品分析、五种战斗模式、攻击类型、生态地图、碰撞架构 |
-| v0.1 | [Implementation_Plan_v0.1.md](Implementation_Plan_v0.1.md) | ✅ 已完成 | 实现方案 — 框架能力评估、模块划分、9个Milestone、测试方案、Issue拆解 |
+| 1 | [CONCEPT.md](CONCEPT.md) | 一页纸概念定位 | 任何人 |
+| 2 | [GDD.md](GDD.md) | 玩法设计正文 | 策划、程序、美术 |
+| 3 | [TECHNICAL.md](TECHNICAL.md) | 技术方案与框架缺口 | 程序 |
+| 4 | [MILESTONES.md](MILESTONES.md) | 制作计划 | 制作人、程序 |
 
-## 项目定位
+## 原则
 
-基于 MxFramework（WGameFramework）开发的 AI 生物构筑沙盒游戏。
+- **每份文档只写一次**。交叉引用代替复制粘贴。
+- **设计决策和理由**归 GDD；**框架映射和配置格式**归 TECHNICAL；**排期和验收**归 MILESTONES。
+- 旧草稿已归档至 `Archive/`。
 
-> **设计身体，编排行为，投放生态，观察结果，回收改造。**
+## 关联文档
 
-## 核心差异化
-
-> 不是我控制怪物战斗，而是我设计怪物的身体和脑子，让它在生态地图中证明自己。
-
-## 当前阶段目标
-
-> **Creature Mission Slice：一只可配置 AI 的生物，在一个确定性小地图中完成回收任务。**
+- 框架能力清单：`WGameFramework/Docs/CAPABILITIES.md`
+- 框架使用手册：`WGameFramework/Docs/USAGE.md`
+- 游戏开发规范：`WGameFramework/Docs/AGENT_GAME_CREATION_GUIDE.md`
