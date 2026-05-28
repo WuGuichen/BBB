@@ -1,8 +1,12 @@
-# WORLD SIMULATION — 多智能体仿真与生态规范
+# WORLD SIMULATION — 多智能体仿真（总线的名词库）
 
-> 版本 2.0 | 2026-05-28
+> 版本 3.1 | 2026-05-28
 >
-> 世界有自己的生命。设计师定义规则，不定义剧本。
+> 本文档是 [System_Core.md](System_Core.md) 的名词库。
+> 生态位 = 不同的 EmitterDef + SensorDef + 性格权重组合。
+> 内部需求接到 System_Core §6 的效用公式。
+>
+> 冲突裁决：System_Core > 本文档。
 
 ---
 
@@ -87,18 +91,16 @@ public sealed class AgentProfile
 
 # 3. 内部需求系统
 
-每个生物有6个内部需求：
+每个生物有6个内部需求，接入 [System_Core §6](System_Core.md#6-效用与犹豫决策且可归因) 的效用公式：
 
-| 需求 | 范围 | 行为影响 |
-|------|------|---------|
-| 饥饿 | 0-100 | >70时优先找食物 |
-| 疲劳 | 0-100 | >80时减速 |
-| 恐惧 | 0-100 | >60时逃跑优先级上升 |
-| 好奇 | 0-100 | >50时会被未知吸引 |
-| 攻击欲 | 0-100 | 受伤累积 |
-| 思乡 | 0-100 | 远离出口太久 |
-
-**行为 = f(AI蓝图, 需求, 环境, 记忆)**
+| 需求 | 范围 | 效用公式中的作用 |
+|------|------|----------------|
+| 饥饿 | 0-100 | NeedWeight[Hunger] 放大进食 Intent |
+| 疲劳 | 0-100 | NeedWeight[Fatigue] 放大休息 Intent |
+| 恐惧 | 0-100 | NeedWeight[Fear] 放大逃跑 Intent |
+| 好奇 | 0-100 | NeedWeight[Curiosity] 放大调查 Intent |
+| 攻击欲 | 0-100 | NeedWeight[Aggression] 放大攻击 Intent |
+| 思乡 | 0-100 | NeedWeight[Homesick] 放大返回 Intent |
 
 ---
 

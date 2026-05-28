@@ -202,6 +202,8 @@ meta进度：解锁新部件选项、新AI规则、新生态区
 
 玩家组合：条件卡、意图卡、权重。
 
+**编译目标**：卡片规则最终编译成 [System_Core §6](System_Core.md#6-效用与犹豫决策且可归因) 的 `PersonalityBias[intent]` 和 `Relevance(intent, belief.Tag)`。
+
 ## 4.2 AI蓝图结构
 
 ```csharp
@@ -230,16 +232,18 @@ UseAbility / Hide / CallForHelp / Rest
 
 ## 4.5 内部需求
 
-行为 = f(AI蓝图, 需求, 环境, 记忆)
+行为 = f(AI蓝图, 需求, 环境, 记忆)，不只是f(AI蓝图)。
 
-| 需求 | 范围 | 行为影响 |
-|------|------|---------|
-| 饥饿 | 0-100 | >70时优先找食物 |
-| 疲劳 | 0-100 | >80时减速 |
-| 恐惧 | 0-100 | >60时逃跑优先级上升 |
-| 好奇 | 0-100 | >50时会被未知吸引 |
-| 攻击欲 | 0-100 | 受伤累积 |
-| 思乡 | 0-100 | 远离出口太久 |
+需求通过 `NeedWeight[need]` 接入 [System_Core §6](System_Core.md#6-效用与犹豫决策且可归因) 的效用公式。
+
+| 需求 | 范围 | 效用公式中的作用 |
+|------|------|----------------|
+| 饥饿 | 0-100 | NeedWeight[Hunger] 放大进食 Intent |
+| 疲劳 | 0-100 | NeedWeight[Fatigue] 放大休息 Intent |
+| 恐惧 | 0-100 | NeedWeight[Fear] 放大逃跑 Intent |
+| 好奇 | 0-100 | NeedWeight[Curiosity] 放大调查 Intent |
+| 攻击欲 | 0-100 | NeedWeight[Aggression] 放大攻击 Intent |
+| 思乡 | 0-100 | NeedWeight[Homesick] 放大返回 Intent |
 
 ---
 

@@ -8,7 +8,7 @@
 
 **阶段**：概念期 → 预制作期
 
-**版本**：3.0（2026-05-28）
+**版本**：3.1（2026-05-28）
 
 **当前目标**：M4 判生死验证
 
@@ -18,20 +18,20 @@
 
 **这次能走多远？**
 
-不是"我收集了什么"，是"这次Run我能深入到第几区"。
-
 ## 更接近什么游戏
 
 **FTL × Spelunky × Cogmind × Screeps**
 
-## 核心设计
+## 铁律
 
-- **身体部件**：8类（Core/Movement/Sensor/Weapon/Defense/Utility/Brain/Social）
-- **AI蓝图**：卡片式规则，玩家配置行为
-- **Run结构**：3-5个连续生态区，难度递增
-- **撤退**：随时可撤退，带回当前收集。全灭丢失Run内资源
-- **Meta进度**：样本/数据死了保留，用于解锁新选项
-- **涌现**：多智能体+环境独立+需求系统
+- **铁律 A — 无暗骰子。** 结果结算永不掷骰。随机性只允许存在于"初始位置 + 活物目标"。
+- **铁律 B — 无实体特判。** 禁止 `if (对方是清道夫)` 形式的交互代码。交互只能通过总线产生。
+
+## 裁决链
+
+```
+代码 > MILESTONES > TECHNICAL > System_Core > Sensory_Design ≈ Map_Templates > GDD > CONCEPT
+```
 
 ## 命名关系
 
@@ -43,12 +43,21 @@
 | **WGame_B** | 游戏设计项目（Gitea: `vincent/WGame_B`） |
 | **WGame** | 游戏层代码目录（基于 MxFramework 实现） |
 
-## 文档
+## 文档（阅读顺序）
 
-- [CONCEPT.md](Design/CONCEPT.md) — 概念定位
-- [GDD.md](Design/GDD.md) — 游戏设计文档
-- [Sensory_Design.md](Design/Sensory_Design.md) — 感知系统设计规范
-- [World_Simulation.md](Design/World_Simulation.md) — 多智能体仿真与生态规范
-- [Map_Templates.md](Design/Map_Templates.md) — 地图与生态区规范
-- [TECHNICAL.md](Design/TECHNICAL.md) — 技术方案
-- [MILESTONES.md](Design/MILESTONES.md) — 制作计划
+### 地基
+
+1. [System_Core.md](Design/System_Core.md) — 刺激·信念·效用总线（架构地基）
+
+### 核心
+
+2. [Sensory_Design.md](Design/Sensory_Design.md) — 感知系统（总线的渲染层）
+3. [World_Simulation.md](Design/World_Simulation.md) — 多智能体仿真（总线的名词库）
+4. [Map_Templates.md](Design/Map_Templates.md) — 地图与生态区
+
+### 框架
+
+5. [GDD.md](Design/GDD.md) — 游戏设计文档
+6. [TECHNICAL.md](Design/TECHNICAL.md) — 技术方案
+7. [MILESTONES.md](Design/MILESTONES.md) — 制作计划
+8. [CONCEPT.md](Design/CONCEPT.md) — 概念定位

@@ -1,6 +1,64 @@
 # TECHNICAL — 技术方案
 
-> 版本 3.0 | 2026-05-28
+> 版本 3.1 | 2026-05-28
+
+---
+
+# 0. Stimulus–Belief–Utility Bus（最先实现）
+
+> 所有实体实现 `IEmitStimulus + IReadStimulus`。总线是整个系统的脊椎。
+> 详细规范见 [System_Core.md](System_Core.md)。
+
+## 0.1 接口定义
+
+```csharp
+public interface IEmitStimulus
+{
+    EmitterDef[] GetEmitters();  // 设计师填的名词
+}
+
+public interface IReadStimulus
+{
+    SensorDef[] GetSensors();    // 设计师填的名词
+    void OnStimulusReceived(Stimulus stim);  // 形成 Belief
+}
+```
+
+## 0.2 总线运行时
+
+```csharp
+public sealed class StimulusBus
+{
+    // 每帧：收集所有 IEmitStimulus 发射的 Stimulus
+    // 传播：按通道规则（视觉直线/嗅觉扩散/听觉球面）
+    // 分发：所有 IReadStimulus 在范围内的接收
+    // 形成 Belief → 进入 Utility 计算
+}
+```
+
+## 0.3 战斗结算 — 无暗骰子
+
+```csharp
+// 伤害 = 攻击方 DamageAttribute × 防御方 ArmorAttribute
+// 没有随机浮动。结果 100% 可追溯到玩家本可知道的原因。
+public int CalculateDamage(int attack, int defense)
+{
+    return Mathf.Max(0, attack - defense);
+}
+```
+
+## 0.4 模块目录（总线相关）
+
+```
+Assets/Scripts/WGame/
+├── Bus/                   # Stimulus-Belief-Utility Bus
+│   ├── Stimulus/          # Stimulus 结构体、通道/标签枚举
+│   ├── Emitter/           # IEmitStimulus、EmitterDef
+│   ├── Sensor/            # IReadStimulus、SensorDef
+│   ├── Propagation/       # 传播规则（每通道一套）
+│   ├── Belief/            # Belief 生命周期（形成/衰减/过期）
+│   └── Utility/           # 效用计算、犹豫检测
+```
 
 ---
 
