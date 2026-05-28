@@ -1,24 +1,20 @@
 # WGame_B
 
-一款 Auto Battler + Roguelite 游戏。用探索获得的零件组装有性格的小队，让它们在危险环境中自动执行任务。
+一款 Companion Exploration Roguelite。你带着你创造的生命去探险未知世界。你通过它的眼睛看世界，它根据性格做选择，你在关键时刻帮它一把。
 
-> **用手里的牌，打出最好的局。**
+> **通过他者的感知，理解未知。**
 
 ## 当前状态
 
 **阶段**：概念期 → 预制作期
 
-**当前目标**：Roguelike Auto-Strategy Slice v0
+**当前目标**：M1-M2 判生死验证
 
-## 核心公式
-
-```
-稀缺零件 + 环境压力 → 倒逼策略编排 → 自动执行验证 → 成就感
-```
+一只生物在迷雾房间里走 60 秒 — 找东西、犹豫、被你喊一句话改变了方向 — 如果这一分钟让 playtest 玩家睁大眼睛，项目就成立。
 
 ## 更接近什么游戏
 
-Super Auto Pets × FTL × Backpack Hero
+Pikmin × Darkest Dungeon × Lifeline
 
 ## 命名关系
 
