@@ -4,27 +4,30 @@
 
 | 顺序 | 文档 | 版本 | 用途 |
 |------|------|------|------|
-| 1 | [CONCEPT.md](CONCEPT.md) | v0.6 | 一页纸概念 |
-| 2 | [GDD.md](GDD.md) | v0.6 | 玩法设计 |
-| 3 | [TECHNICAL.md](TECHNICAL.md) | v0.6 | 技术方案 |
-| 4 | [MILESTONES.md](MILESTONES.md) | v0.6 | 制作计划 |
+| 1 | [CONCEPT.md](CONCEPT.md) | v0.7 | 一页纸概念 |
+| 2 | [GDD.md](GDD.md) | v0.7 | 玩法设计 |
+| 3 | [TECHNICAL.md](TECHNICAL.md) | v0.7 | 技术方案 |
+| 4 | [MILESTONES.md](MILESTONES.md) | v0.7 | 制作计划 |
+
+## v0.7 主要变更
+
+基于深度审阅修订 — 解决决策密度和结构性问题：
+
+- **小队制**：从单生物改为 2-3 只小队，解决协同空间和决策密度
+- **Build Identity**：生物在 Run 内持续存在，核心零件死亡不丢
+- **操作维度**：信号 + 侦察 + 撤退，从 1 维变 3 维
+- **分支星图**：精英/事件/休息节点，路径选择本身是策略
+- **AI 模块矛盾叠加**：勇气+谨慎 = 高血量冲低血量逃，产生真正犹豫
+- **战斗可观察性**：前摇+音效+伤害数字
+- **竞品校准**：从 StS 改为 Super Auto Pets / Mechabellum / Backpack Hero
+- **Playtest 前移**：M2 就开始给人看，不等到 M6
 
 ## 原则
 
-- 每份文档只写一次，交叉引用代替复制
+- 每份文档只写一次
 - 冲突裁决：代码 > MILESTONES > TECHNICAL > GDD > CONCEPT
 
-## v0.6 主要变更
+## 关联
 
-核心方向从"AI 行为实验"改为"Roguelike 即时策略"：
-
-- 零件不是自由选择，是探索中获得（稀缺性驱动策略）
-- 信号是道具，不是 cooldown 能力
-- 压力倒逼策略（时间、敌人、背包容量）
-- AI 自动执行是为了让策略成为唯一变量
-- 类比：Slay the Spire 的实时生物版
-
-## 关联文档
-
-- 框架能力清单：`WGameFramework/Docs/CAPABILITIES.md`
-- 游戏开发规范：`WGameFramework/Docs/AGENT_GAME_CREATION_GUIDE.md`
+- 框架：`WGameFramework/Docs/CAPABILITIES.md`
+- 开发规范：`WGameFramework/Docs/AGENT_GAME_CREATION_GUIDE.md`
