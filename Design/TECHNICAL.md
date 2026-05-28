@@ -199,7 +199,7 @@ RuntimeHost Tick
 # 7. 游戏层模块
 
 ```
-Assets/Scripts/VVV/
+Assets/Scripts/WGame/                # 游戏层代码（基于 MxFramework）
 ├── Sensory/               # 感知系统（视觉/嗅觉/迷雾/记忆衰减）
 ├── Creature/              # 生物、属性、记忆、命名、伤痕
 ├── CreatureAi/            # AI 模块、Personality Signature、Decision Trace

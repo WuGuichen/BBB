@@ -29,11 +29,12 @@
 ## M0：骨架 + Sensory Sandbox
 
 要做：
-1. `Assets/Scripts/VVV/` + `VVVRuntimeCompositionRoot`
-2. `RuntimeHost` + `RuntimeCommandBuffer`
+1. `Assets/Scripts/WGame/` + `WGameRuntimeCompositionRoot`（游戏层组合根，基于 MxFramework）
+2. `RuntimeHost` + `RuntimeCommandBuffer`（复用框架）
 3. AABB 房间 + 占位生物 + 基础移动
 4. **Sensory Sandbox 调试场景**：固定房间、可重置、无限信号、可热切 build。详见 [TECHNICAL §10](TECHNICAL.md)
 5. 2.5D 等距相机基线（55-60°，正交或弱透视）
+6. 滞后跟随相机（200-300ms 延迟）
 
 验收：
 - 生物可移动，不穿墙，Replay hash 一致

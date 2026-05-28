@@ -23,7 +23,8 @@ Pikmin × Darkest Dungeon × Lifeline
 | **WGameFramework** | 游戏框架（Gitea: `vincent/WGameFramework`） |
 | **MxFramework** | 框架内部名称 |
 | **WGame_B** | 游戏设计项目（Gitea: `vincent/WGame_B`） |
-| **VVV** | 游戏层代码目录 |
+| **VVV** | WGameFramework 的 GitHub 镜像名称（即框架代码本身） |
+| **WGame** | 游戏层代码目录（基于 MxFramework 实现） |
 
 ## 文档
 
