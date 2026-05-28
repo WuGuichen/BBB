@@ -1,8 +1,6 @@
 # TECHNICAL — 技术方案
 
-> 版本 2.0 | 2026-05-28
->
-> 冲突时本文档高于 Sensory_Design / GDD / CONCEPT。
+> 版本 3.0 | 2026-05-28
 
 ---
 
@@ -53,14 +51,11 @@ public sealed class PartDefinition
     public int PartId;
     public string Name;
     public PartCategory Category;   // Core/Locomotion/Sensor/Weapon/Defense/Utility/Brain/Social
-    public PartRarity Rarity;       // White/Blue/Purple
+    public PartRarity Rarity;
     public float Weight;
     public float EnergyCost;
-    public float Noise;
-    public float Durability;
     public int[] AttributeModifierIds;
     public int[] AiModuleIds;
-    public bool IsCorePart;         // 死亡不丢
 }
 ```
 
@@ -69,10 +64,9 @@ public sealed class PartDefinition
 ```csharp
 public sealed class BuildBudget
 {
-    public float WeightLimit;       // 体重预算
-    public float EnergyLimit;       // 能量预算
-    public int BrainCapacity;       // 脑容量（可装AI规则数）
-    public float MutationStability; // 突变稳定度
+    public float WeightLimit;
+    public float EnergyLimit;
+    public int BrainCapacity;
 }
 ```
 
@@ -86,7 +80,7 @@ public sealed class BuildBudget
 public sealed class AiBlueprint
 {
     public string BlueprintId;
-    public List<AiRule> Rules;          // 规则卡列表
+    public List<AiRule> Rules;
     public Dictionary<string, float> BlackboardVars;
     public StateMachine States;
 }
@@ -94,9 +88,9 @@ public sealed class AiBlueprint
 public sealed class AiRule
 {
     public string RuleId;
-    public List<AiCondition> Conditions; // 条件卡
-    public AiIntent Intent;              // 意图卡
-    public float Weight;                 // 权重
+    public List<AiCondition> Conditions;
+    public AiIntent Intent;
+    public float Weight;
     public float Cooldown;
 }
 ```
@@ -104,7 +98,6 @@ public sealed class AiRule
 ## 4.2 Utility打分
 
 ```csharp
-// 每帧计算每个Intent的分数
 foreach (var rule in blueprint.Rules)
 {
     if (rule.Conditions.All(c => c.Evaluate(blackboard)))
@@ -112,16 +105,7 @@ foreach (var rule in blueprint.Rules)
         intentScores[rule.Intent] += rule.Weight;
     }
 }
-// 选择最高分的Intent执行
 ```
-
-## 4.3 玩家配置界面
-
-玩家不写代码，用卡片式界面：
-- 选择条件卡（看到敌人/血量低/饥饿高...）
-- 选择意图卡（攻击/逃跑/调查/进食...）
-- 调权重
-- 排列优先级
 
 ---
 
@@ -139,15 +123,6 @@ public sealed class NeedState
 }
 ```
 
-需求影响Utility打分：
-
-```csharp
-// 饥饿>70时，进食Intent权重+50
-if (needs.Hunger > 70) intentScores[Eat] += 50;
-// 恐惧>60时，逃跑Intent权重+40
-if (needs.Fear > 60) intentScores[Flee] += 40;
-```
-
 ---
 
 # 6. 信号系统
@@ -156,31 +131,114 @@ if (needs.Fear > 60) intentScores[Flee] += 40;
 public sealed class Signal
 {
     public string SignalId;
-    public SignalType Type;         // Beacon/Warning/Recall/Calm/Stimulate
+    public SignalType Type;
     public AiGoalPriorityShift[] GoalShifts;
-    public float PersonalityResistance; // 不同AI蓝图的抵抗系数
+    public float PersonalityResistance;
 }
 ```
 
-信号不直接控制行为，而是改变Utility分数。AI设计太极端，生物可能不听。
+---
+
+# 7. Run管理系统
+
+## 7.1 Run状态
+
+```csharp
+public sealed class RunState
+{
+    public int CurrentZone;           // 当前生态区索引
+    public int TotalZones;            // 总生态区数
+    public List<CreatureEntity> Party; // 当前生物
+    public RunInventory Inventory;     // Run内部件/信号/食物
+    public SampleInventory Samples;    // 样本（死亡保留）
+    public DataInventory Data;         // 数据（死亡保留）
+    public bool IsRetreating;          // 是否正在撤退
+}
+```
+
+## 7.2 Run内资源 vs Meta资源
+
+```csharp
+// Run内部件：装在生物身上或在背包里，死了丢
+public class RunInventory
+{
+    public List<PartInstance> Parts;
+    public List<Signal> Signals;
+    public List<Food> Food;
+}
+
+// 样本：完成任务目标获得，死了保留
+public class SampleInventory
+{
+    public Dictionary<int, int> Samples; // sampleId -> count
+}
+
+// 数据：观察行为/失败分析获得，死了保留
+public class DataInventory
+{
+    public Dictionary<int, int> Data; // dataType -> amount
+}
+```
+
+## 7.3 撤退机制
+
+```csharp
+public class RetreatSystem
+{
+    // 玩家选择撤退
+    public void Retreat(RunState run)
+    {
+        // 带回所有Run内资源
+        MetaProgress.AddParts(run.Inventory.Parts);
+        MetaProgress.AddSamples(run.Samples);
+        MetaProgress.AddData(run.Data);
+        // Run结束
+        run.End();
+    }
+    
+    // 全灭
+    public void Wipe(RunState run)
+    {
+        // 丢失Run内资源
+        // 保留样本和数据
+        MetaProgress.AddSamples(run.Samples);
+        MetaProgress.AddData(run.Data);
+        // Run结束
+        run.End();
+    }
+}
+```
+
+## 7.4 Meta进度
+
+```csharp
+public class MetaProgress
+{
+    public HashSet<int> UnlockedParts;      // 解锁的部件选项
+    public HashSet<int> UnlockedAiRules;    // 解锁的AI规则
+    public HashSet<int> UnlockedZones;      // 解锁的生态区
+    public int HatcherySlots;               // 孵化槽位
+    public int StationLevel;                // 实验站等级
+}
+```
 
 ---
 
-# 7. 主循环
+# 8. 主循环
 
 ```
 RuntimeHost Tick
-    ├── RunStateModule              (Run管理)
+    ├── RunStateModule              (Run管理：当前区/撤退/全灭)
     ├── MapRevealModule             (迷雾)
     ├── WorldSimulationModule       (多智能体仿真)
     │   ├── AgentAiModule           (每个活物的AI Planner)
     │   ├── AgentNeedModule         (需求系统)
     │   └── EnvironmentModule       (环境规则)
-    ├── LootModule                  (零件掉落)
-    ├── InventoryModule             (背包)
+    ├── LootModule                  (部件/信号/食物掉落)
+    ├── InventoryModule             (Run内背包)
     ├── CreatureSensorModule        (感知→AiWorldState)
     ├── CreatureMemoryModule        (短期记忆)
-    ├── CreatureAiModule            (玩家生物AI，含需求交互)
+    ├── CreatureAiModule            (玩家生物AI)
     ├── CreatureMotionModule        (移动)
     ├── CreatureCombatModule        (接触伤害)
     ├── SignalModule                (信号系统)
@@ -191,45 +249,52 @@ RuntimeHost Tick
 
 ---
 
-# 8. 游戏层模块
+# 9. 游戏层模块
 
 ```
 Assets/Scripts/WGame/
 ├── Body/                  # 身体部件系统
-│   ├── Parts/             # 部件定义
-│   ├── Budget/            # 预算系统
-│   └── Assembly/          # 组装逻辑
+│   ├── Parts/
+│   ├── Budget/
+│   └── Assembly/
 ├── Ai/                    # AI蓝图系统
-│   ├── Blueprint/         # 蓝图定义
-│   ├── Rules/             # 规则卡
-│   ├── Conditions/        # 条件卡
-│   ├── Intents/           # 意图卡
-│   └── Utility/           # Utility打分
+│   ├── Blueprint/
+│   ├── Rules/
+│   ├── Conditions/
+│   ├── Intents/
+│   └── Utility/
 ├── World/                 # 多智能体仿真
-│   ├── Agents/            # 独立AI主体
-│   ├── Needs/             # 需求系统
-│   ├── Environment/       # 环境规则
-│   ├── Ecology/           # 生态位
-│   └── Persistence/       # 跨Run持久化
+│   ├── Agents/
+│   ├── Needs/
+│   ├── Environment/
+│   ├── Ecology/
+│   └── Persistence/
 ├── Sensory/               # 感知系统
 ├── Signal/                # 信号系统
+├── Run/                   # Run管理
+│   ├── RunState/
+│   ├── RunInventory/
+│   ├── Retreat/
+│   └── ZoneTransition/
+├── Meta/                  # Meta进度
+│   ├── Unlocks/
+│   ├── Station/
+│   └── Samples/
 ├── Task/                  # 任务系统
-├── Station/               # 实验站
 ├── Report/                # 战后报告
-├── Map/                   # 房间模板、活物配置
+├── Map/                   # 房间模板
 ├── Camera/                # 2.5D等距相机
 ├── DebugSandbox/          # 调试场景
-├── Demo/                  # 场景入口
-└── Tests/                 # 测试
+├── Demo/
+└── Tests/
 ```
 
 ---
 
-# 9. Decision Trace Overlay
-
-开发期必备调试系统。
+# 10. Decision Trace Overlay
 
 每次AI决策记录：
+
 ```
 Frame 1832
 Known Facts: enemy.visible, hunger.high, fear.medium
@@ -237,11 +302,9 @@ Top Goals: Attack=72, Flee=68, Eat=44
 Decision: Hesitate (delta=4 < threshold=15)
 ```
 
-UI形态：Unity Game View叠加层（F1切换），支持时间回溯。
-
 ---
 
-# 10. 视觉与相机规格
+# 11. 视觉与相机规格
 
 **2.5D等距俯视**。相机角度55-60°。
 
@@ -250,34 +313,12 @@ UI形态：Unity Game View叠加层（F1切换），支持时间回溯。
 关键时刻zoom：
 - 犹豫：1.0→1.1
 - 战斗接触：1.0→1.15，慢放0.5s
-- 拾取：微推0.05
 
 ---
 
-# 11. 确定性
+# 12. 确定性
 
 - Fix64 / FixVector3
 - Replay hash CI
 - 视觉层不进hash
 - 随机性集中在RunRandom seed
-
----
-
-# 12. 测试
-
-## 12.1 单元
-
-- 部件属性计算正确性
-- AI Blueprint规则评估正确性
-- 需求系统状态变化正确性
-- 信号GoalShift正确性
-
-## 12.2 集成
-
-- Replay hash跨帧率一致
-- Decision Trace输出与AI Planner实际选择一致
-
-## 12.3 Playtest
-
-- 同一房间3次播放事件不同
-- 玩家能说出"我下次想试试不同的设计"
