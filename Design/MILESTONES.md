@@ -1,6 +1,6 @@
 # MILESTONES — 制作计划
 
-> 版本 0.3 | 2026-05-27
+> 版本 0.5 | 2026-05-27
 >
 > 本文描述开发阶段、验收条件和风险。技术映射见 [TECHNICAL.md](TECHNICAL.md)，玩法设计见 [GDD.md](GDD.md)。
 
@@ -10,24 +10,24 @@
 
 | 阶段 | 目标 | 核心验证 |
 |------|------|----------|
-| **M0** | 游戏层骨架 | RuntimeHost 能 Tick，占位生物可见 |
-| **M1** | 确定性移动 | 生物在 AABB 房间中移动不穿墙，Replay hash 一致 |
-| **M2** | 单一 AI 拾取任务 | TaskFirst 完成回收任务，失败时记录决策 |
-| **M3** | Brain View + Mission Report v0 | 玩家能看懂 AI 为什么这么做 |
-| **M4** | 基础战斗 | 敌人给任务制造压力，死亡原因进入报告 |
-| **M5** | 身体部件 v0 | 身体配置影响任务结果 |
-| **M6** | AI Profile v0 | 同一身体不同性格行为明显不同 |
-| **M7** | 生态地图 v0 | 地图标签影响物种和构筑选择 |
-| **M8** | 玩家间接指挥 | 信标/信号影响 AI 行为 |
-| **M9** | 批量仿真 | 自动跑 100 次，输出成功率和失败类型 |
+| **M0** | Behavior Lab 骨架 | RuntimeHost 能 Tick，占位生物可见 |
+| **M1** | 歧义地图 + 确定性移动 | 生物在三路地图中移动不穿墙，Replay hash 一致 |
+| **M2** | 行为旋钮 + AI 基础 | 旋钮改变路线选择，Memory 影响行为 |
+| **M3** | Quick Test | 旋钮调整 30 秒内看到行为差异 |
+| **M4** | 信号 cooldown | 玩家通过信号影响 AI 决策，犹豫提示可见 |
+| **M5** | 任务闭环 + Fast-forward | 完整回收任务，1x/2x/4x/8x，Retry Same + Variant Retry |
+| **M6** | Attempt Diff + 涌现高亮 | 玩家能从报告理解"改了什么导致了什么" |
+| **M7** | 身体部件 v0 | 部件影响任务结果，和旋钮/地图有交互 |
+| **M8** | 基础战斗 | 接触威胁 + Bite + HP + Death |
+| **M9** | Profile v0 | TaskFirst/Hunter/Coward 作为旋钮预设 |
 
-**关键原则**：M2 不要求 Hunter/Coward，只用 TaskFirst。AI Profile 在 M6 才正式做。Brain View 和 Mission Report 在 M3 就做最小版，不等到 M8。
+**关键原则**：先验证"AI 行为调教是否好玩"，再加部件、战斗、生态。
 
 ---
 
 # 2. 各阶段详情
 
-## M0：游戏层骨架
+## M0：Behavior Lab 骨架
 
 **目标**：VVV 游戏层成立，RuntimeHost 正常 Tick。
 
@@ -42,289 +42,243 @@
 - Frame 增长
 - Reset 后状态一致
 
-不做：美术、AI、敌人、战斗、碰撞
-
 ---
 
-## M1：确定性移动
+## M1：歧义地图 + 确定性移动
 
-**目标**：单体生物在 AABB 房间中移动到目标点。
+**目标**：Lab Field 01 三路地图可玩，单体生物移动不穿墙。
 
 复用：`CombatPhysicsWorld` + `CombatKinematicMotor`
 
 要做：
 1. `EcoMapDefinition` + `EcoRoomDefinition`
-2. AABB 障碍生成到 CombatPhysicsWorld
-3. `CreatureMotionAdapter`（包一层，不重写运动管线）
-4. `MoveToTargetCommand`
-5. 视觉同步（占位几何体）
+2. Lab Field 01：三岔路（短路/长路/侧路）+ AABB 障碍
+3. 资源点 + 出口 + 敌人巡逻点
+4. `CreatureMotionAdapter`
+5. 视觉同步（占位几何体 + 路线颜色区分）
 
 验收：
-- 不穿墙
-- 能到达指定点
+- 生物能走到三条路中的任意一条
+- 撞墙不穿透
 - Replay hash 一致
 - 不同帧率结果一致
 
 ---
 
-## M2：单一 AI 拾取任务
+## M2：行为旋钮 + AI 基础
 
-**目标**：TaskFirst AI 完成资源拾取并返回出口。
+**目标**：旋钮改变 AI 行为，Memory 让 AI 有"过去"。
 
-**只做一个 AI（TaskFirst），不要求 Hunter/Coward。**
-
-复用：`Runtime AI Planner` + `GameplayComponentWorld`
+复用：`Runtime AI Planner` + `CreatureAiProfileRuntimeAdapter`
 
 要做：
-1. `CreatureFactKeys`（resource.visible / exit.visible / inventory.full / hp.low）
-2. `CreatureAiWorldStateProjector`
-3. 基础 Goal（collect.resource / return.exit / avoid.death）和 Action（MoveTo / PickUp / Return / Flee / Wait）
-4. `CreatureAiProfileRuntimeAdapter`（硬编码 TaskFirst 的 goals/actions，见 [TECHNICAL §3.2](TECHNICAL.md#32-核心策略游戏层先硬编码验证)）
-5. `CreatureAiDecisionTrace`（游戏层自建 trace，见 [TECHNICAL §3.2](TECHNICAL.md#32-核心策略游戏层先硬编码验证)）
-6. `MissionRuntimeModule`（CollectResource + ReturnToExit 目标）
+1. 5 个行为旋钮（Aggression/Caution/Curiosity/Greed/HomeBias）
+2. 旋钮→Goal priority / Action cost 映射
+3. 旋钮张力关系 UI 提示
+4. `CreatureFactKeys`（resource.visible / enemy.visible / threat.near / hp.low / path.shortRisky / path.longSafe / time.low）
+5. 3 个 Memory（lastThreatPosition / lastResourcePosition / avoidZoneMemory）
+6. Route choice 作为 Intent（TakeShortRoute / TakeSafeRoute）
+7. `CreatureAiDecisionTrace`
 
 验收：
-- TaskFirst 在 LabRoom01 成功率 ≥ 80%
-- 失败时记录最后 10 次决策（frame、facts、selected goal/action、reason）
+- Aggression 高时 AI 更倾向走短路
+- Caution 高时 AI 更倾向走长路
+- Memory：AI 闻到威胁后即使敌人不在视野仍绕路
 - 同一输入 Replay hash 100% 一致
+- **同一地图至少 3 种旋钮配置可成功完成任务**
 
 ---
 
-## M3：Brain View + Mission Report v0
+## M3：Quick Test
 
-**目标**：玩家能看懂 AI 为什么这么做。
+**目标**：旋钮调整 30 秒内看到行为差异。
 
 要做：
-1. Brain Debug HUD（UI Toolkit）
-   - 显示当前 facts（resource.visible / hp.low / enemy.near 等）
-   - 显示当前 goal + priority
-   - 显示当前 action + cost
-   - 显示 selected reason
-2. Mission Report（任务结束后显示）
-   - 成功/失败
-   - 耗时（frame 数）
-   - 资源收益
-   - 失败分类（timeout / died / lost.path / ignored.objective）
-   - 最后 10 次 AI 决策时间线
+1. Quick Test 模式（3 个 10 秒场景：遇敌/见资源/危险区）
+2. 结果摘要（攻击/绕行/逃跑 × 拾取/忽略 × 穿越/绕路）
+3. Quick Test 入口 UI
 
 验收：
-- Brain View 关键 Label 文本非空，颜色 alpha > 0
-- 任务失败后，报告能指出至少一个失败原因
-- 玩家能根据报告说出"下次我该怎么改"
-- **主观 Playtest**：让 3 个非开发者看完一次任务，能复述"这只生物刚才为什么这么做"。技术上的 MVP 跑通不代表玩法上的 MVP 跑通。
-- **Data 奖励去重**：新失败模式给大量 Data，重复失败模式递减。防止玩家无脑送死刷 Data。
+- 旋钮调整后 30 秒内看到行为差异
+- Quick Test 结果和完整任务中的行为一致
+- **主观 Playtest**：3 个非开发者能通过 Quick Test 理解旋钮效果
 
 ---
 
-## M4：基础战斗
+## M4：信号 cooldown
 
-**目标**：敌人给任务制造压力。
-
-只做：Bite（Sphere query + DamageByAttackDefense）+ Charge（Capsule sweep + 击退）+ HP + Death + Corpse placeholder
-
-复用：`CombatPhysicsWorld.Query` + `Gameplay Attributes/Buffs`
+**目标**：玩家通过信号影响 AI 决策，任务中有干预点。
 
 要做：
-1. `CreatureCombatRuntimeModule`
-2. Bite + Charge 攻击
-3. 敌人 AI（巡逻 + 看到玩家后攻击）
-4. 死亡 → 尸体状态
-5. 战斗事件进入 Decision Trace
+1. Avoid Signal（标记区域为危险，AvoidThreat +30，持续 8 秒）
+2. Recall Signal（ReturnToExit +80，持续 15 秒）
+3. Signal Charge（每局 3 次，cooldown 10 秒）
+4. 犹豫提示"？"（最高分和第二分差距小时显示）
+5. 信号使用 UI
 
 验收：
-- 弱敌可被 Bite 击杀
-- 强敌可杀死玩家生物
-- 死亡原因进入 Mission Report（died.to.enemy）
-- Replay 结果一致
-
-不做：连招、打断、部位破坏、Projectile、Slash、群体战斗
+- Avoid Signal 能让 AI 改走安全路线
+- Recall Signal 能让 AI 中途返回
+- 犹豫提示在 AI 不确定时可见
+- 信号有 10 秒 cooldown，不能连续使用
+- **主观 Playtest**：3 个非开发者能说出"我在关键时刻发了信号"
 
 ---
 
-## M5：身体部件 v0
+## M5：任务闭环 + Fast-forward
 
-**目标**：身体配置影响任务结果。
+**目标**：完整回收任务可玩，支持加速和重试。
+
+要做：
+1. `MissionRuntimeModule`（CollectResource + ReturnToExit）
+2. Fast-forward（1x/2x/4x/8x）
+3. Retry Same Seed
+4. Variant Retry（改变敌人位置/资源位置/危险区状态）
+5. 成功/失败判定
+
+验收：
+- 完整任务可跑通（拿资源 → 返回出口）
+- 4x/8x 不影响结果（确定性）
+- Retry Same Seed 结果一致
+- Variant Retry 产生不同结果
+- **决策密度**：3 分钟内至少 2 个有效信号使用点
+- **主观 Playtest**：3 个非开发者能复述"这只生物刚才为什么这么做"
+
+---
+
+## M6：Attempt Diff + 涌现高亮
+
+**目标**：玩家能从报告理解"改了什么导致了什么"，AI 聪明行为被看见。
+
+要做：
+1. Causal Summary（3-5 个关键节点的因果链，自然语言）
+2. Attempt Diff（和上次同地图对比：旋钮变化→行为变化→结果变化）
+3. 涌现高亮（AI 因 Memory/Signal 选择非默认路线时主动提示）
+4. 实验评分标签（险胜/高效回收/过度谨慎/贪婪致死/聪明绕路）
+5. **Data 奖励去重**（新失败模式给大量 Data，重复失败递减）
+
+验收：
+- 因果摘要不超过 5 个节点，自然语言可读
+- Attempt Diff 能指出"smell_sensor 导致绕路"
+- 涌现高亮在 AI 记住威胁绕路时触发
+- **主观 Playtest**：3 个非开发者能根据 Attempt Diff 说出"下次我该调什么"
+- **90% 失败能归因到 1 条主要因果链**
+
+---
+
+## M7：身体部件 v0
+
+**目标**：部件影响任务结果，和旋钮/地图有交互。
 
 复用：`AttributeStore.AddModifier` + `ConfigModifierFactory`
 
 要做：
-1. `BodyPartDefinitionConfig` — 6 类，每类 2 个：
-   - Core: light_core / heavy_core
-   - Movement: fast_legs / stable_legs
-   - Sensor: basic_eye / smell_sensor
-   - Weapon: bite_jaw / charge_horn
-   - Defense: thin_skin / armor_shell
-   - Brain: primitive_brain / tactical_brain
-2. 部件→属性修改器映射
-3. 部件→Action 解锁映射（charge_horn 解锁 Charge）
-4. 部件→Fact 解锁映射（smell_sensor 解锁 corpse.near / resource.smell）
+1. `BodyPartDefinitionConfig` — 6 类，每类 2 个
+2. 部件→属性修改器 / Action 解锁 / Fact 解锁映射
+3. **部件×环境交互**（fast_legs 穿短路快但转向差，smell_sensor 和 Caution 联动）
 
 验收：
 - fast_legs 平均完成时间比 stable_legs 短 ≥ 15%
 - armor_shell 生存率比 thin_skin 高 ≥ 20%
-- smell_sensor 能在无视野时找到资源（basic_eye 不能）
-- charge_horn 解锁 Charge 攻击
-- **反协同验证**：fast_legs + armor_shell 组合，在能量预算约束下，成功率不能严格高于 fast_legs + thin_skin 和 stable_legs + armor_shell 中任意一个。**预算/维护成本是底层数学，不是 Post-MVP 装饰。**
-
-性价比简化：模型暂不变，只改颜色/图标/HUD 文案。
+- smell_sensor 能在无视野时找到资源
+- **反协同验证**：fast_legs + armor_shell 在预算约束下不能严格优于其他组合
 
 ---
 
-## M6：AI Profile v0
+## M8：基础战斗
 
-**目标**：同一身体，不同性格行为明显不同。
-
-复用：`CreatureAiProfileRuntimeAdapter`（M2 已建，现在扩展到 3 个 Profile）
+**目标**：接触威胁给任务制造压力。
 
 要做：
-1. 扩展 `CreatureAiProfileRuntimeAdapter` 支持 TaskFirst / Hunter / Coward
-2. Brain Debug View 显示 Profile 名称和 goal/action 差异
+1. 接触伤害（敌人碰到玩家 → 受伤 → 可逃跑）
+2. Bite（Sphere query + DamageByAttackDefense）
+3. 敌人 AI（巡逻 + 看到玩家后追击）
+4. 死亡 → 尸体状态
+5. 威胁估计（threat.stronger based on enemy stats）
 
 验收：
-- Hunter 攻击动作次数比 TaskFirst 高 ≥ 50%
-- Coward 在 enemy.near + hp.low 时，Flee 选择率 ≥ 80%
-- Brain View 能解释三个 Profile 的行为差异
-- 同一 Replay 输入下，三个 Profile 的 hash 不同（因为 plan 不同）
-
-**M6 完成后立即跑批量仿真**（不等到 M9）：
-- 100 次 TaskFirst vs Hunter vs Coward
-- 确认 Profile 真有统计显著差异
-- 输出成功率、平均耗时、死亡率、失败分类分布
-
-**Playtest**：让 3 个非开发者试玩 30 分钟，写下他们以为这游戏在干什么。
+- 弱敌可被击杀
+- 强敌可杀死玩家生物
+- 死亡原因进入因果报告
+- 战斗事件进入涌现高亮（如"它打了两口发现打不过，带伤撤退了"）
 
 ---
 
-## M7：生态地图 v0
+## M9：Profile v0
 
-**目标**：地图标签影响物种和构筑选择。
-
-复用：`CombatPhysicsWorld`（碰撞体）
-
-分两步：
-
-### M7a：地图标签 + 多房间
+**目标**：Profile 作为旋钮预设，降低新手门槛。
 
 要做：
-1. `HabitatZoneDefinition`（light/terrain/hazard/resource 标签）
-2. 多房间地图（废弃温室 / 酸性洞穴 / 机械废墟）
-3. Room + Portal 结构
+1. TaskFirst / Hunter / Coward 三个预设
+2. 每个预设 = 旋钮值 + 推荐部件
+3. 选择预设后自动填充旋钮
 
 验收：
-- 不同房间有不同的 terrain/hazard 标签
-- Portal 正确连接房间
-
-### M7b：物种 SpawnProfile + 行为
-
-要做：
-1. `SpeciesSpawnProfile` + SpawnScore 计算
-2. prey_bug（小型猎物）+ guard_beast（重甲守卫）
-3. 游戏层 GameHazardVolume（酸池伤害）
-
-验收：
-- prey_bug 出现在开阔资源区
-- guard_beast 守着高价值资源点
-- 酸池每 tick 对区域内实体造成伤害
-
-**M7 完成后立即跑批量仿真**：
-- 确认不同地图标签影响物种分布
-- 确认酸池地图和普通地图的成功率有差异
-
-**Playtest**：让 3 个非开发者在酸池地图试玩，观察他们是否理解"为什么生物在酸池里会死"。
-
----
-
-## M8：玩家间接指挥
-
-**目标**：玩家能通过信号影响 AI。
-
-要做：
-1. `PlayerSignalCommand`（Move Beacon / Recall Beacon）
-2. 信号写入 AiWorldState facts
-3. 不同 Profile 对信号的不同响应
-
-验收：
-- Recall Beacon 能提高 Return 行为选择率（具体数字在批量仿真后标定，30% 对玩家几乎察觉不到，通常需要 60-70%+）
-- Hunter 对 Recall 的响应弱于 TaskFirst（因为 defeat.enemy 优先级高）
-- Coward 对 Recall 的响应强于 Hunter
-
----
-
-## M9：批量仿真与平衡报告
-
-**目标**：自动跑 100 次任务，输出成功率和失败类型。
-
-复用：`FrameworkSimulationBatchRunner`（框架已有）
-
-要做：
-1. 100 次 TaskFirst collect mission
-2. 100 次 Hunter collect mission
-3. 100 次 Coward collect mission
-4. fast_legs vs armor_shell 对比
-
-验收：
-- 输出每个 Profile 的成功率
-- 输出平均耗时
-- 输出死亡率
-- 输出失败分类分布（died / timeout / ignored.objective 等）
-- 输出 fast_legs vs armor_shell 的完成时间差异
+- 三个预设的行为差异可感知
+- Brain View 能解释差异
+- 玩家可以从预设出发微调旋钮
 
 ---
 
 # 3. 最小竖切内容清单
 
-第一版真的只需要这些：
-
 | 类别 | 内容 |
 |------|------|
-| **地图** | Lab Room 01：1 封闭房间 + 3 AABB 障碍 + 1 资源点 + 1 出口 + 1 敌人出生点 |
-| **生物** | Player Creature：HP / MoveSpeed / Attack / Defense / Inventory |
-| **敌人** | Dummy Beast：巡逻 + 看到玩家后攻击 |
-| **AI Profile** | M2: TaskFirst only → M6: +Hunter +Coward |
-| **动作** | MoveToResource / PickUpResource / MoveToExit / BiteEnemy / FleeFromThreat / Wait |
-| **UI** | Start / Pause / Step / Reset / Save / Load / Brain View / Mission Report |
-| **报告** | Success/Failure / Final HP / Resource count / Selected actions / Failure reason |
+| **地图** | Lab Field 01：三岔路 + 资源 + 出口 + 敌人 + 危险区 |
+| **生物** | Player Creature：HP / MoveSpeed / Attack / Defense |
+| **敌人** | Dummy Beast：巡逻 + 看到玩家后追击 |
+| **旋钮** | Aggression / Caution / Curiosity / Greed / HomeBias |
+| **信号** | Avoid Signal / Recall Signal（各 3 次/局，cooldown 10 秒） |
+| **Memory** | lastThreatPosition / lastResourcePosition / avoidZoneMemory |
+| **UI** | 旋钮面板 / Quick Test / 信号按钮 / 犹豫提示 / Fast-forward / Retry |
+| **报告** | Causal Summary / Attempt Diff / 涌现高亮 / 实验评分 |
 
 ---
 
-# 4. 风险清单
+# 4. Playtest 节点
+
+| 阶段 | Playtest 内容 |
+|------|--------------|
+| M3 | 3 个非开发者通过 Quick Test 理解旋钮效果 |
+| M5 | 3 个非开发者完成一次任务，能复述 AI 行为原因 |
+| M6 | 3 个非开发者能根据 Attempt Diff 说出"下次我该调什么" |
+| M7 | 3 个非开发者能感受到部件差异 |
+| M9 | 3 个非开发者能区分三个 Profile 的行为风格 |
+
+---
+
+# 5. 风险清单
 
 | 风险 | 应对 |
 |------|------|
-| 涌现 vs 噪声：AI 自主性是意外还是随机？ | Brain View 自然语言归因 + 失败分类可理解 + M3/M6/M7 Playtest |
-| AI 看起来像乱跑 | M3 做 Brain View（自然语言层），每个 action 有 reason |
-| 系统太复杂没人能调 | 先只给 3 个 AI Profile，不开放自由编辑 |
-| 战斗不好玩 | 第一版战斗只验证 AI 策略（打/跑/完成任务），不追求手感 |
-| 美术拖住开发 | 全用占位几何体，身体部件只在 HUD 展示 |
-| 框架 AI 扩展未到位 | 游戏层先硬编码 Profile Adapter，不等框架补 P0 |
-| 最强构筑通杀 | M5 就做预算/维护成本反协同，不是 Post-MVP 装饰 |
-| 确定性回放 hash 回归 | 尽早自动化 Replay hash CI，每次合并 PR 跑回归 |
+| 涌现 vs 噪声 | Brain View 自然语言归因 + 涌现高亮 + M3/M5/M6 Playtest |
+| 任务中只能看戏 | 信号 cooldown + 犹豫提示 + 决策密度验收 |
+| 设计粒度太粗 | 行为旋钮（5 个带张力）代替纯 Profile |
+| 反馈循环太慢 | Quick Test（30 秒）+ Fast-forward + Retry Same Seed |
+| 构筑有最优解通杀 | 预算约束 + 部件×环境交互 + 歧义地图 |
+| AI 黑箱 | 因果报告 + Attempt Diff + Memory 事件可追溯 |
+| 认知负担太高 | 预设 Profile → Quick Test → Attempt Diff 三层降低 |
+| 最强构筑通杀 | M7 反协同验证 |
+| 确定性回放 hash 回归 | 尽早自动化 Replay hash CI |
 
 ---
 
-# 5. 暂缓清单
-
-明确不做：
+# 6. 暂缓清单
 
 | 功能 | 原因 |
 |------|------|
-| 程序化身体建模 | 玩法未验证，先用数值+占位体 |
-| 复杂 IK 步态 | 同上 |
-| 玩家 AI 图编辑器 | 先用预制 Profile，后期再开放 |
-| 繁殖/遗传 | 太复杂，不在 MVP |
-| 多人蓝图对战 | 需要网络层，不在 MVP |
-| 完整 Mod SDK | 需要稳定 API，不在 MVP |
-| 动态天气/生态演化 | 先做静态生态标签 |
+| Decision Checkpoint（强制暂停） | 节奏风险，用犹豫提示+信号 cooldown 代替 |
+| AI Confidence / Commitment | 解释负担高，等 playtest 验证后再加 |
+| 自由 AI 卡片编辑器 | 先用旋钮，后期再开放 |
+| 完整战斗系统 | 先做接触威胁，验证行为深度后再加 |
+| 生态模拟 / 多物种 | 先验证单体行为调教 |
+| 程序化身体建模 | 玩法未验证 |
+| 繁殖 / 多人 / Mod | 不在 MVP |
 | 正式美术 | 全用占位体 |
-| CharacterAction 集成 | 代码完成但未接入管线，等基础闭环成立后再评估 |
-| Projectile / Slash / Grapple | 引入弹道/扇形判定/抓取物理，复杂度高 |
-| 部件破坏 | 需要部位碰撞+局部功能失效+AI残疾重规划 |
-| 群体战斗 / 领地战斗 | 需要小队/仇恨/保护系统 |
-| Utility / Social 部件 | 推向小队/协作/生态，复杂度提前爆炸 |
 
 ---
 
-# 6. 框架调整 Issue 建议（暂不创建）
+# 7. 框架调整 Issue 建议（暂不创建）
 
 待游戏层验证成立后，在 WGameFramework 仓库创建：
 
