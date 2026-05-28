@@ -181,11 +181,15 @@ public sealed class PartDefinition
 RuntimeHost Tick
     ├── RunStateModule              (Run 管理)
     ├── MapRevealModule             (迷雾，视觉层不入 hash)
+    ├── WorldSimulationModule       (多智能体仿真：所有活物独立运作)
+    │   ├── AgentAiModule           (每个活物的 AI Planner)
+    │   ├── AgentNeedModule         (饥饿/疲劳/恐惧/好奇/攻击欲/思乡)
+    │   └── EnvironmentModule       (酸池扩散/毒气变向/火源蔓延)
     ├── LootModule                  (零件掉落)
     ├── InventoryModule             (背包)
     ├── CreatureSensorModule        (视觉/嗅觉 → AiWorldState)
     ├── CreatureMemoryModule        (短期记忆 + Trust v0/v1)
-    ├── CreatureAiModule            (AI 规划)
+    ├── CreatureAiModule            (玩家生物 AI 规划，含需求交互)
     ├── CreatureMotionModule        (移动)
     ├── CreatureCombatModule        (接触伤害，3-5秒)
     ├── InterventionModule          (干预动词 + Outcome 回写)
@@ -207,8 +211,13 @@ Assets/Scripts/WGame/                # 游戏层代码（基于 MxFramework）
 ├── Intervention/          # 干预动词 + Outcome 分类
 ├── Trust/                 # Trust v0/v1
 ├── Highlight/             # 性格高亮、犹豫提示、结果层短语
-├── Run/                   # Run 管理、Mission Report
-├── Map/                   # 房间模板、宝箱、节拍元素
+├── World/                 # 多智能体仿真（敌人/野生生物/环境规则）
+│   ├── Agents/            # 独立 AI 主体（巡逻者/捕食者/清道夫/小爬虫）
+│   ├── Needs/             # 需求系统（饥饿/疲劳/恐惧/好奇/攻击欲/思乡）
+│   ├── Environment/       # 环境规则（酸池/毒气/火源/水流/可破坏墙）
+│   └── Persistence/       # 跨 Run 世界持久化
+├── Run/                   # Run 管理、Mission Report（数据轨迹）
+├── Map/                   # 房间模板、活物配置、环境元素
 ├── Loot/                  # 零件掉落
 ├── Inventory/             # 背包
 ├── Camera/                # 2.5D 等距相机（见 §11）
