@@ -1,149 +1,176 @@
 # MAP TEMPLATES — 地图与生态区规范
 
-> 版本 3.2 | 2026-05-28
+> 版本 3.3 | 2026-05-28
 >
-> 地图是**名词容器**。每个生态区是 Run 中的一个节点。
-> 房间只定义地形 + 活物的 EmitterDef/SensorDef/PersonalityBias，不定义事件。
-> 事件从总线涌现，不由设计师编写。
->
+> 设计师只定义元素库和约束。房间从元素库中组合，不由设计师预设"这间房放什么"。
 > 冲突裁决：System_Core > 本文档。
 
 ---
 
 # 1. 设计原则
 
-## 1.1 房间是名词容器
+## 1.1 设计师不出考题
+
+设计师定义：
+- 地形模板（墙/通道/开阔地/酸池区域）
+- 元素库（哪些 EmitterDef/SensorDef/PersonalityBias 可用）
+- 约束（每房间最少几个活物、难度上限）
+
+程序决定：
+- 这间房具体放什么活物
+- 活物的初始位置
+- 环境元素的分布
+
+**设计师不知道这间房会发生什么。**
+
+## 1.2 地形是固定的，活物是随机的
 
 ```
-房间 = 地形 + 活物配置 + 环境元素
-活物配置 = EmitterDef + SensorDef + PersonalityBias（名词，不是事件）
+地形模板 = 手工设计（墙/通道/开阔地/酸池区域的位置）
+活物配置 = 从元素库中按约束随机抽取
+环境元素 = 从元素库中按约束随机放置
 ```
 
-设计师摆名词，总线自己跑出故事。
-
-## 1.2 Run 结构
-
-```
-Run = 3-5 个连续生态区
-每个生态区 = 3-5 个房间（随机拼接）
-```
-
-每次 Run 的房间组合不同。程序化拼接保证重玩性。
-
-## 1.3 活物密度
-
-每个房间至少 3-4 个独立 AI 主体 + 1-2 种环境元素。
-
-活物的行为（发射 Stimulus → 形成 Belief → Utility 输出 → 新动作 → 新 Stimulus）自然产生事件。
+**同一张地形模板，不同 Run 进去，活物不同，发生的故事不同。**
 
 ---
 
-# 2. 生态区
+# 2. 元素库
 
-每个生态区是一张"考试卷"，测试不同的生物设计：
+## 2.1 EmitterDef 库（谁能发射什么 Stimulus）
 
-| 生态区 | 测试什么 | Run 位置 | 难度 |
-|--------|---------|---------|------|
-| **废弃温室** | 基础生存、路径选择 | 第 1 区 | T1 |
-| **酸性洞穴** | 抗性、路径选择 | 第 2 区 | T2 |
-| **机械废墟** | 潜行、电子干扰 | 第 3 区 | T2-T3 |
-| **火山地带** | 热抗性、逃跑逻辑 | 第 4 区 | T3 |
-| **异常区** | 未知规则 | 第 5 区 | T3+ |
+设计师定义的名词库。每个 EmitterDef 是一个"发射能力"：
 
-## 2.1 废弃温室
+| ID | Channel | Tag | Intensity | Period | 说明 |
+|----|---------|-----|-----------|--------|------|
+| E01 | Visual | Threat | 0.8 | 0 | 看得见的威胁 |
+| E02 | Smell | Threat | 0.5 | 0 | 威胁的气味 |
+| E03 | Smell | Corpse | 0.6 | 2.0 | 尸体持续散发 |
+| E04 | Smell | Food | 0.3 | 0 | 食物气味 |
+| E05 | Smell | Resource | 0.2 | 0 | 资源气味 |
+| E06 | Smell | Hazard | 0.7 | 1.0 | 危险持续散发（酸池/毒气） |
+| E07 | Visual | Prey | 0.4 | 0 | 小型猎物 |
+| E08 | EM | Threat | 0.6 | 0 | 机械体威胁 |
+| E09 | EM | Resource | 0.4 | 0 | 机械资源 |
 
-```
-活物配置（名词）：
-- 草食小虫：EmitterDef{Visual, Prey, 0.3}，SensorDef{Visual, Range=5}
-- 中型捕食者：EmitterDef{Visual, Threat, 0.8}，SensorDef{Visual+Smell, Range=8}
-- 清道夫：EmitterDef{Smell, Corpse, 0.0}（只读不发），SensorDef{Smell, Range=10}
+**每加一个新实体，先在元素库里加 EmitterDef。** 不在代码里硬编码。
 
-环境元素：
-- 普通地面（无 Stimulus）
-- 窄通道（地形约束）
-- 巢穴（周期发 Smell:Food）
-- 水源（周期发 Smell:Food）
-```
+## 2.2 SensorDef 库（谁能读取什么 Stimulus）
 
-## 2.2 酸性洞穴
+| ID | Channel | Range | AngleError | ConfidenceBase | GivesPosition | GivesIdentity | 说明 |
+|----|---------|-------|------------|----------------|---------------|---------------|------|
+| S01 | Visual | 8 | 0 | 1.0 | true | true | 普通眼 |
+| S02 | Visual | 12 | 0 | 1.0 | true | true | 夜视眼（黑暗不缩） |
+| S03 | Smell | 10 | 30 | 0.6 | false | false | 嗅觉腔 |
+| S04 | Visual+Smell | 6+8 | 0+30 | 1.0+0.6 | true+false | true+false | 复合感官 |
+| S05 | EM | 8 | 0 | 0.8 | true | false | 电磁感应 |
 
-```
-活物配置：
-- 酸蚀虫：EmitterDef{Smell, Hazard, 0.5}（自带酸），SensorDef{Smell, Range=6}
-- 大型捕食者：EmitterDef{Visual+Smell, Threat, 0.9}，SensorDef{Visual+Smell, Range=10}
-- 清道夫：同上
+**SensorDef 决定生物形成什么样的 Belief。** 换 SensorDef = 换信息来源 = 换行为。
 
-环境元素：
-- 酸池：EmitterDef{Smell, Hazard, 0.7, Period=1.0}（持续发射，扩散）
-- 黑暗区（Visual Range 缩小 50%）
-- 矿物资源点：EmitterDef{Smell, Resource, 0.3}
-```
+## 2.3 PersonalityBias 库（性格模板）
 
-## 2.3 机械废墟
+| ID | 说明 | 攻击 | 逃跑 | 进食 | 调查 | 返回 |
+|----|------|------|------|------|------|------|
+| P01 | 均衡 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| P02 | 狂暴 | 1.5 | 0.6 | 0.8 | 0.9 | 0.7 |
+| P03 | 胆小 | 0.6 | 1.5 | 1.0 | 0.7 | 1.2 |
+| P04 | 拾荒 | 0.7 | 1.0 | 1.4 | 0.8 | 1.1 |
+| P05 | 好奇 | 0.9 | 0.9 | 0.8 | 1.5 | 0.8 |
+| P06 | 领地 | 1.3 | 0.8 | 0.9 | 1.0 | 1.3 |
 
-```
-活物配置：
-- 机械巡逻者：EmitterDef{Visual+EM, Threat, 0.6}，SensorDef{Visual+EM, Range=8}
-- 小型无人机：EmitterDef{Visual, Threat, 0.2}，SensorDef{Visual, Range=12}（侦察型）
-- 异常体：特殊 EmitterDef（规则特殊）
+**PersonalityBias 是 Utility 公式中的乘数。** 1.0 = 正常，>1.0 = 放大该 Intent，<1.0 = 抑制。
 
-环境元素：
-- 可开门/关门（改变视觉传播路径）
-- 电子干扰区（EM 通道 Range 缩小）
-- 金属资源点：EmitterDef{EM, Resource, 0.4}
-```
+## 2.4 AgentProfile 库（活物模板 = Emitter+Sensor+Personality 的组合）
+
+设计师预定义一些"物种模板"，但**不指定它们出现在哪里**：
+
+| ID | 名称 | Emitters | Sensors | Personality | HP | 说明 |
+|----|------|----------|---------|-------------|-----|------|
+| A01 | 小虫 | E07 | S01 | P01 | 20 | 弱，可被猎 |
+| A02 | 清道夫 | E03 | S03 | P04 | 40 | 跟着尸体走 |
+| A03 | 巡逻者 | E01,E02 | S01,S03 | P06 | 80 | 守领地 |
+| A04 | 捕食者 | E01,E02 | S01,S03 | P02 | 60 | 主动追猎 |
+| A05 | 机械巡逻 | E08 | S01,S05 | P01 | 100 | 按路线走 |
+| A06 | 酸蚀虫 | E06 | S03 | P03 | 30 | 自带酸，胆小 |
+
+**每加一个新物种，先在 AgentProfile 库里加条目。** 不在房间模板里硬编码。
 
 ---
 
-# 3. 房间模板
+# 3. 地形模板
+
+设计师手工设计地形，不设计活物：
 
 ```csharp
-public sealed class RoomTemplate
+public sealed class TerrainTemplate
 {
     public string TemplateId;
-    public RoomCategory Category;       // Explore / Encounter / Resource / Transition
-    public Vec2Int Size;                // 典型 20×20
+    public Vec2Int Size;
     public List<ConnectionPort> Ports;
-    public List<AgentSpawn> Spawns;     // 活物名词配置
-    public List<EnvEntity> EnvEntities; // 环境元素名词配置
-    public List<StaticObstacle> Obstacles;
-    public List<ResourceSpot> Resources;
-}
-
-// AgentSpawn 只携带名词，不携带事件
-public sealed class AgentSpawn
-{
-    public AgentType Type;
-    public Vec2 SpawnAreaCenter;
-    public float SpawnAreaRadius;
-    public EmitterDef[] Emitters;       // 该活物发射什么 Stimulus
-    public SensorDef[] Sensors;         // 该活物读取什么 Stimulus
-    public float[] PersonalityBias;     // 性格偏置（喂进效用公式）
+    public List<StaticObstacle> Obstacles;  // 墙/岩石/矮丛
+    public List<ZoneTag> ZoneTags;          // 区域标签（黑暗/酸池区域/开阔/窄通道）
 }
 ```
 
----
-
-# 4. 程序拼接
-
-每个生态区由 3-5 个房间模板拼接：
-
-```
-1. 选择入口房间
-2. 程序选择 2-3 个中间房间（随机）
-3. 选择出口房间
-4. 连接：上一房间出口 → 下一房间入口
-5. 在房间内程序化放置活物（按 AgentSpawn 配置）
-```
-
-**重玩性靠变体 + 拼接。** 地形固定，活物初始位置和环境元素随机。
+**地形模板只定义物理空间。** 不定义"这间房是探索室还是遭遇室"——那是活物组合的结果。
 
 ---
 
-# 5. 撤退点
+# 4. 房间生成规则
+
+程序从元素库中组合房间：
+
+```
+输入：地形模板 + 难度等级 + 元素库
+输出：完整房间（地形 + 活物 + 环境元素）
+
+规则：
+1. 根据地形模板的 ZoneTags 筛选可用 AgentProfile（酸池区域 → 可放酸蚀虫）
+2. 根据难度等级决定活物数量（T1=2-3, T2=3-4, T3=4-5）
+3. 从筛选后的 AgentProfile 中随机抽取
+4. 从环境元素库中按 ZoneTags 随机放置
+5. 活物初始位置在地形中随机（避开墙/出口附近）
+```
+
+**设计师不决定"这间房放巡逻者"。设计师决定"巡逻者在元素库里"，程序决定"这次它出现在这间房"。**
+
+---
+
+# 5. 生态区
+
+生态区只定义**约束**，不定义内容：
+
+| 生态区 | 约束 |
+|--------|------|
+| **废弃温室** | 无特殊环境。难度 T1。活物数 2-4。 |
+| **酸性洞穴** | 必须有酸池区域。难度 T2。活物数 3-5。 |
+| **机械废墟** | 必须有 EM 区域。难度 T2-T3。活物数 3-5。 |
+| **火山地带** | 必须有热区域。难度 T3。活物数 4-6。 |
+| **异常区** | 无约束。难度 T3+。可能有特殊元素。 |
+
+**生态区不告诉你"这里有什么"。生态区只告诉你"这里的环境约束是什么"。**
+
+---
+
+# 6. 程序拼接
+
+每个生态区由 3-5 个房间拼接：
+
+```
+1. 从地形模板库中按难度抽取 3-5 个模板
+2. 连接：上一房间出口 → 下一房间入口
+3. 每个房间按 §4 规则生成活物和环境元素
+4. 难度递增：后面房间的活物数+1，或难度等级+1
+```
+
+**每次 Run 的房间组合不同，每个房间的活物不同。** 同一生态区的不同 Run，体验完全不同。
+
+---
+
+# 7. 撤退点
 
 每个生态区出口前有撤退选项：
-- 选择"继续" → 进入下一个生态区
-- 选择"撤退" → Run 结束，带回所有收集的资源
+- "继续" → 进入下一个生态区
+- "撤退" → Run 结束，带回所有收集的资源
 
-**撤退是策略核心。** 继续深入风险更高但奖励更好。
+**撤退是策略核心。**
