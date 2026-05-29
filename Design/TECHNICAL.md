@@ -390,7 +390,34 @@ Decision: Hesitate (delta=4 < threshold=15)
 
 # 12. 确定性
 
-- Fix64 / FixVector3
-- Replay hash CI
-- 视觉层不进hash
-- 随机性集中在RunRandom seed
+**全栈确定性。** 不用 Unity 内置 PhysX。
+
+```
+数值层：Fix64 / FixVector3 / FixMatrix
+物理层：定点数 AABB 碰撞检测 + 固定步长物理循环
+逻辑层：所有 Gameplay 模块（Utility/Combat/Body/Signal）
+随机性：集中在 RunRandom seed
+渲染层：读取权威状态，不参与计算
+```
+
+## 12.1 物理系统
+
+**不用 Unity PhysX。** 自研定点数物理：
+
+- 碰撞体：AABB / OBB / 球（定点数）
+- 碰撞检测：GJK/SAT（定点数运算）
+- 动力学：固定步长（不依赖 DeltaTime）
+- solver：单线程，确定性迭代顺序
+- 碰撞回调：确定性顺序
+
+**Replay 100% 一致。** 不同平台、不同硬件、不同帧率 → 同样的结果。
+
+## 12.2 Hash 分层
+
+| 层 | 进 hash | 说明 |
+|----|---------|------|
+| Gameplay 逻辑 | ✅ | Utility/Combat/Body/Signal |
+| 物理状态 | ✅ | 位置/速度/碰撞结果 |
+| 部件状态 | ✅ | PartRuntimeState |
+| 渲染表现 | ❌ | 程序化身体/粒子/相机 |
+| UI | ❌ | 头顶图标/行为日志 |
