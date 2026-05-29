@@ -294,16 +294,30 @@ RuntimeHost Tick
     │   └── EnvironmentModule       (环境规则)
     ├── LootModule                  (部件/信号/食物掉落)
     ├── InventoryModule             (Run内背包)
-    ├── CreatureSensorModule        (感知→AiWorldState)
+    ├── CreatureSensorModule        (感知→Belief，受 PartRuntimeState 修正)
     ├── CreatureMemoryModule        (短期记忆)
-    ├── CreatureAiModule            (玩家生物AI)
-    ├── CreatureMotionModule        (移动)
-    ├── CreatureCombatModule        (接触伤害)
+    ├── CreatureAiModule            (玩家生物AI，Utility 受部件损伤修正)
+    ├── CreatureBodyModule          (部件状态/损伤/输出能力) ← 进hash，权威
+    ├── CreatureMotionModule        (移动，受 MoveSpeed 修正)
+    ├── CreatureContactResolver     (接触结算：attack-defense，无暗骰)
+    ├── CreatureCombatModule        (战斗后果→新 Stimulus 注入总线)
     ├── SignalModule                (信号系统)
+    ├── ProceduralBodyViewModule    (程序化身体表现：摆动/拖行/断裂) ← 不进hash
     ├── HighlightModule             (AI反馈四层)
     ├── DecisionTraceModule         (开发期调试)
     └── Diagnostics / Replay / Hash
 ```
+
+**CreatureBodyModule（进 hash）**：维护每个实体的 `PartRuntimeState[]`。部件损伤修改 SensorDef/EmitterDef/Attribute，直接影响 Belief 形成和 Utility 计算。
+
+**ProceduralBodyViewModule（不进 hash）**：读取 CreatureBodyModule 的权威状态，翻译为程序化身体表现：
+- 部件完好 → 正常摆动/朝向
+- 部件 Weakened → 拖行/减速动画
+- 部件 Disabled → 挂在身上不动
+- 部件 Detached → 飞出
+- 部件 Leaking → 粒子从身体漏出
+
+**接触结算（CreatureContactResolver）**：`damage = attack - defense`，无随机浮动。结果 100% 可追溯到部件属性。
 
 ---
 

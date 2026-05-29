@@ -85,6 +85,45 @@ public sealed class Belief
 }
 ```
 
+## 3.5 部件运行时状态（损伤如何进入总线）
+
+部件损伤不是特效，是**数据**。损伤改变 SensorDef/EmitterDef/Attribute，直接影响 Belief 形成和 Utility 计算。
+
+```csharp
+public enum PartImpairment
+{
+    None,
+    Weakened,      // 功能下降
+    Disabled,      // 功能失效
+    Detached,      // 部件脱落
+    Jammed,        // 卡住（机械体）
+    Leaking,       // 漏气/漏液（自身变 Emitter）
+    Misreading     // 误读（Sensor 置信度下降）
+}
+
+public sealed class PartRuntimeState
+{
+    public int PartId;
+    public float Integrity01;           // 1.0→0.0
+    public PartImpairment Impairment;
+    public AttributeModifier[] OutputModifiers;  // 对属性的修正
+    public EmitterDef[] DamageEmitters;          // 损伤产生的新 Stimulus（漏气/流血）
+    public SensorNoiseModifier[] SensorNoise;    // 对 SensorDef 的噪声修正
+}
+```
+
+**损伤→总线的映射**：
+
+| 部件 | 损伤 | 对总线的影响 |
+|------|------|------------|
+| 腿 Weakened | MoveSpeed -30% | 移动发的 Visual Stimulus Intensity 降低 |
+| 眼 Misreading | Visual ConfidenceBase -0.2 | 形成的 Belief 更不确定 |
+| 嗅觉腔 Leaking | 自身持续发 Smell:Prey/Corpse 弱刺激 | 捕食者更容易追踪它 |
+| 爪 Disabled | AttackAttribute -X | 战斗接触伤害降低 |
+| 甲破裂 | DefenseAttribute -X | 下次接触伤害更高 |
+
+**关键**：损伤产生新的 EmitterDef（漏气/流血），重新进入总线。**闭合性测试**：受伤→发出新刺激→被其他实体读到→产生新行为。
+
 ---
 
 ## 4. 传播规则(每通道一套,这是世界的物理)
